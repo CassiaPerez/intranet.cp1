@@ -1,0 +1,464 @@
+[
+  {
+    "id": "horario_funcionamento",
+    "pergunta": "Qual o horário de funcionamento da empresa?",
+    "palavras_chave": ["horário", "funcionamento", "empresa", "trabalho", "expediente", "abrir", "fechar", "horario"],
+    "resposta": "O horário de funcionamento é de segunda a sexta-feira, das 8h às 18h. Aos sábados, domingos e feriados a empresa não funciona.",
+    "categoria": "empresa"
+  },
+  {
+    "id": "contato_rh_geral",
+    "pergunta": "Como entro em contato com o RH?",
+    "palavras_chave": ["rh", "recursos humanos", "contato rh", "falar rh"],
+    "resposta": "Você pode entrar em contato com o RH pelos ramais 3162-2713, 3162-2756, 3162-2739, 3162-2750 ou 3162-2718. Também pode consultar o Diretório para ver todos os contatos do setor de RH.",
+    "categoria": "contatos"
+  },
+  {
+    "id": "contato_ti",
+    "pergunta": "Como entro em contato com o TI?",
+    "palavras_chave": ["ti", "tecnologia", "informação", "contato ti", "suporte", "computador"],
+    "resposta": "Para suporte de TI, você pode fazer uma solicitação através do menu 'Equipamentos' na intranet. A equipe de TI será notificada automaticamente e entrará em contato.",
+    "categoria": "contatos"
+  },
+  {
+    "id": "reservar_sala",
+    "pergunta": "Como reservo uma sala?",
+    "palavras_chave": ["reservar", "sala", "reunião", "agendamento", "calendário"],
+    "resposta": "Para reservar uma sala, acesse o menu 'Reservas', selecione a sala desejada (Aquário, Grande, Pequena ou Recepção) e clique no horário desejado no calendário. Preencha os dados da reunião e confirme.",
+    "categoria": "intranet"
+  },
+  {
+    "id": "trocar_proteina",
+    "pergunta": "Como troco a proteína do almoço?",
+    "palavras_chave": ["trocar", "proteína", "almoço", "cardápio", "comida", "proteina"],
+    "resposta": "Acesse o menu 'Troca de Proteínas', selecione os dias desejados e escolha a nova proteína. Lembre-se: trocas devem ser feitas até 16h do dia anterior! As opções são: Frango, Omelete, Ovo frito ou Ovo cozido.",
+    "categoria": "intranet"
+  },
+  {
+    "id": "agendar_visita",
+    "pergunta": "Como agendo uma visita na portaria?",
+    "palavras_chave": ["agendar", "visita", "portaria", "visitante"],
+    "resposta": "Vá ao menu 'Reservas', clique na aba 'Agendamentos da Portaria' e preencha os dados do visitante: nome, documento, data, hora e observações.",
+    "categoria": "intranet"
+  },
+  {
+    "id": "pontos_gamificacao",
+    "pergunta": "Como funciona o sistema de pontos?",
+    "palavras_chave": ["pontos", "gamificação", "ranking", "nível", "level", "gamificacao"],
+    "resposta": "Você ganha pontos por atividades na intranet: curtir posts (2 pts), comentar (3 pts), reservar salas (8 pts), trocar proteínas (5 pts), criar posts (15 pts). Consulte o Dashboard para ver sua pontuação e posição no ranking!",
+    "categoria": "gamificacao"
+  },
+  {
+    "id": "salas_disponiveis",
+    "pergunta": "Quais salas estão disponíveis?",
+    "palavras_chave": ["salas", "disponíveis", "tipos", "capacidade"],
+    "resposta": "Temos 4 salas: Aquário (8 pessoas), Grande (20 pessoas), Pequena (6 pessoas) e Recepção (4 pessoas). Você pode verificar a disponibilidade no calendário de reservas.",
+    "categoria": "instalacoes"
+  },
+  {
+    "id": "setores_empresa",
+    "pergunta": "Quais são os setores da empresa?",
+    "palavras_chave": ["setores", "departamentos", "empresa", "organização"],
+    "resposta": "Os principais setores são: Comercial, Comex, Contabilidade, Crédito, Faturamento, Financeiro, RH e TI. Você pode ver todos os contatos por setor no Diretório.",
+    "categoria": "empresa"
+  },
+  {
+    "id": "mural_publicar",
+    "pergunta": "Como publico no mural?",
+    "palavras_chave": ["publicar", "mural", "post", "informação"],
+    "resposta": "Apenas membros do RH e TI podem publicar no mural. Se você pertence a um desses setores, acesse o menu 'Mural' e clique em 'Nova Publicação'.",
+    "categoria": "intranet"
+  },
+  {
+    "id": "esqueci_senha",
+    "pergunta": "Esqueci minha senha, o que faço?",
+    "palavras_chave": ["esqueci", "senha", "password", "acesso", "login"],
+    "resposta": "Entre em contato com o administrador do sistema ou com o setor de TI para resetar sua senha. Eles podem criar uma nova senha temporária para você.",
+    "categoria": "suporte"
+  },
+  {
+    "id": "aniversariantes",
+    "pergunta": "Como vejo os aniversariantes do mês?",
+    "palavras_chave": ["aniversariantes", "aniversário", "birthday", "comemoração"],
+    "resposta": "Acesse o menu 'Aniversariantes' para ver todos os colaboradores que fazem aniversário no mês atual, incluindo as datas e idades.",
+    "categoria": "intranet"
+  },
+  {
+    "id": "equipamentos_ti",
+    "pergunta": "Como solicito equipamentos de TI?",
+    "palavras_chave": ["equipamentos", "solicitar", "notebook", "computador", "mouse", "teclado"],
+    "resposta": "Acesse o menu 'Equipamentos', selecione o tipo de equipamento (notebook, desktop, smartphone, etc.), defina a prioridade e justifique a necessidade. A solicitação será enviada automaticamente para o TI.",
+    "categoria": "intranet"
+  },
+  {
+    "id": "politica_senhas",
+    "pergunta": "Qual a política de senhas da empresa?",
+    "palavras_chave": ["política", "senhas", "segurança", "password"],
+    "resposta": "As senhas devem ter no mínimo 6 caracteres. Recomendamos usar uma combinação de letras, números e símbolos. Não compartilhe suas credenciais e troque a senha periodicamente.",
+    "categoria": "seguranca"
+  },
+  {
+    "id": "telefones_ramais",
+    "pergunta": "Como encontro telefones e ramais?",
+    "palavras_chave": ["telefones", "ramais", "contatos", "ligação"],
+    "resposta": "Todos os telefones e ramais estão disponíveis no 'Diretório Corporativo'. Você pode filtrar por setor ou cidade para encontrar o contato desejado rapidamente.",
+    "categoria": "contatos"
+  },
+  {
+    "id": "suporte_sistema",
+    "pergunta": "Onde obtenho suporte para usar a intranet?",
+    "palavras_chave": ["suporte", "ajuda", "help", "dúvida", "problema"],
+    "resposta": "Para suporte com a intranet, entre em contato com o setor de TI através do menu 'Equipamentos' ou fale diretamente comigo! Estou aqui para ajudar com dúvidas sobre o sistema.",
+    "categoria": "suporte"
+  },
+  {
+    "id": "backup_dados",
+    "pergunta": "Como são feitos os backups dos dados?",
+    "palavras_chave": ["backup", "dados", "segurança", "informações"],
+    "resposta": "Os backups são realizados automaticamente pelo sistema. Administradores podem gerar backups adicionais através do Painel Admin na aba 'Relatórios'.",
+    "categoria": "seguranca"
+  },
+  {
+    "id": "grupo_cropfield",
+    "pergunta": "O que é o Grupo Cropfield?",
+    "palavras_chave": ["grupo cropfield", "empresa", "sobre", "negócio"],
+    "resposta": "O Grupo Cropfield é uma empresa do agronegócio com operações em várias regiões do Brasil. Atuamos com representação comercial, tecnologia agrícola e soluções para o campo, com equipes em PR, RS, MT, MS, GO, BA, MA, TO, PA, MG e SP.",
+    "categoria": "empresa"
+  },
+  {
+    "id": "localizacoes",
+    "pergunta": "Onde ficam os escritórios da empresa?",
+    "palavras_chave": ["escritórios", "localização", "endereços", "onde fica"],
+    "resposta": "Temos presença em várias cidades: Apucarana-PR (sede), Erechim-RS, Dourados-MS, Nova Mutum-MT, Campo Novo do Parecis-MT, Primavera do Leste-MT, Canarana-MT, Rio Verde-GO, Assis-SP, Uberaba-MG, Luís Eduardo Magalhães-BA, Balsas-MA, Araguaína-TO e Marabá-PA.",
+    "categoria": "empresa"
+  },
+  {
+    "id": "representantes",
+    "pergunta": "Como encontro contatos de representantes?",
+    "palavras_chave": ["representantes", "vendedores", "comercial", "região"],
+    "resposta": "Todos os representantes estão listados no Diretório Corporativo. Use os filtros por cidade para encontrar representantes da sua região de interesse.",
+    "categoria": "contatos"
+  },
+  {
+    "id": "cardapio_semanal",
+    "pergunta": "Qual o cardápio da semana?",
+    "palavras_chave": ["cardápio", "semana", "almoço", "comida", "menu"],
+    "resposta": "Consulte o menu 'Cardápio' para ver o cardápio completo do mês. Lá você encontra todos os pratos, proteínas, acompanhamentos e sobremesas programados.",
+    "categoria": "intranet"
+  },
+  {
+    "id": "ferias_solicitar",
+    "pergunta": "Como solicito férias?",
+    "palavras_chave": ["férias", "solicitar", "descanso", "folga"],
+    "resposta": "Para solicitar férias, entre em contato com o departamento de RH através dos ramais 3162-2713, 3162-2756 ou email. Eles orientarão sobre o processo e documentação necessária.",
+    "categoria": "rh"
+  },
+  {
+    "id": "beneficios_empresa",
+    "pergunta": "Quais são os benefícios da empresa?",
+    "palavras_chave": ["benefícios", "vantagens", "vale", "plano"],
+    "resposta": "Para informações sobre benefícios oferecidos pela empresa (vale alimentação, plano de saúde, etc.), entre em contato com o setor de RH através do ramal 3162-2713 ou consulte o manual do colaborador.",
+    "categoria": "rh"
+  },
+  {
+    "id": "acesso_sistemas",
+    "pergunta": "Como obtenho acesso a sistemas externos?",
+    "palavras_chave": ["acesso", "sistemas", "permissão", "liberação"],
+    "resposta": "Para solicitar acesso a sistemas externos ou mudanças de permissão, faça uma solicitação através do menu 'Equipamentos' especificando qual sistema precisa acessar e justificando a necessidade.",
+    "categoria": "ti"
+  },
+  {
+    "id": "calendario_empresa",
+    "pergunta": "Onde vejo o calendário de eventos da empresa?",
+    "palavras_chave": ["calendário", "eventos", "agenda", "atividades"],
+    "resposta": "O calendário de eventos está disponível no menu 'Reservas' onde você pode ver todas as reuniões agendadas. Para eventos corporativos gerais, consulte o 'Mural' onde são publicados avisos importantes.",
+    "categoria": "empresa"
+  },
+  {
+    "id": "organograma",
+    "pergunta": "Onde encontro o organograma da empresa?",
+    "palavras_chave": ["organograma", "hierarquia", "estrutura", "cargos"],
+    "resposta": "O organograma pode ser consultado no 'Diretório Corporativo' onde você encontra todos os colaboradores organizados por setor e cargo. Para dúvidas sobre a estrutura hierárquica, consulte o RH.",
+    "categoria": "empresa"
+  },
+  {
+    "id": "politicas_internas",
+    "pergunta": "Onde encontro as políticas internas da empresa?",
+    "palavras_chave": ["políticas", "internas", "regras", "normas", "regulamento"],
+    "resposta": "As políticas internas e regulamentos da empresa são divulgados através do 'Mural' oficial. Para documentos específicos, entre em contato com o RH através do ramal 3162-2713.",
+    "categoria": "empresa"
+  },
+  {
+    "id": "primeiro_acesso",
+    "pergunta": "É meu primeiro acesso, o que devo fazer?",
+    "palavras_chave": ["primeiro", "acesso", "novo", "começar", "inicial"],
+    "resposta": "Bem-vindo à Cropfield! Para começar: 1) Explore o Dashboard para conhecer seus pontos e ranking, 2) Acesse o Diretório para conhecer a equipe, 3) Confira o Cardápio para saber o que teremos no almoço, 4) Use o Mural para ficar atualizado com informações importantes.",
+    "categoria": "intranet"
+  },
+  {
+    "id": "problemas_login",
+    "pergunta": "Estou com problemas para fazer login",
+    "palavras_chave": ["problemas", "login", "entrar", "acesso", "credenciais"],
+    "resposta": "Se você está com problemas de login: 1) Verifique se está usando seu email corporativo, 2) Certifique-se de que a senha está correta, 3) Tente usar o login com Google, 4) Se persistir, entre em contato com o TI para resetar sua senha.",
+    "categoria": "suporte"
+  },
+  {
+    "id": "menu_navegacao",
+    "pergunta": "Como navego pelos menus da intranet?",
+    "palavras_chave": ["navegar", "menus", "usar", "interface"],
+    "resposta": "A intranet tem um menu lateral com todas as funcionalidades: Dashboard (visão geral), Reservas (salas e portaria), Cardápio, Aniversariantes, Troca de Proteínas, Diretório (contatos), Equipamentos (TI), Mural (informações) e Painel Admin (apenas admins).",
+    "categoria": "intranet"
+  },
+  {
+    "id": "pontuacao_detalhes",
+    "pergunta": "Como ganho mais pontos no sistema de gamificação?",
+    "palavras_chave": ["ganhar", "pontos", "gamificação", "atividades", "participar"],
+    "resposta": "Ganhe pontos através de atividades: Visitar páginas (1 pt), Curtir posts (2 pts), Comentar (3 pts), Solicitar equipamentos (4 pts), Trocar proteínas (5 pts), Agendar portaria (6 pts), Reservar salas (8 pts), Criar posts (15 pts). Seja ativo na intranet!",
+    "categoria": "gamificacao"
+  },
+  {
+    "id": "ranking_usuarios",
+    "pergunta": "Como vejo minha posição no ranking?",
+    "palavras_chave": ["ranking", "posição", "classificação", "líder"],
+    "resposta": "Sua posição no ranking aparece no Dashboard principal. Lá você vê seus pontos totais, nível atual, posição no ranking mensal e um resumo das suas atividades. O ranking é atualizado em tempo real!",
+    "categoria": "gamificacao"
+  },
+  {
+    "id": "niveis_sistema",
+    "pergunta": "Quantos níveis existem no sistema?",
+    "palavras_chave": ["níveis", "levels", "subir", "nível"],
+    "resposta": "O sistema tem 10 níveis: Nível 1 (0-99 pts), Nível 2 (100-299 pts), Nível 3 (300-599 pts), Nível 4 (600-999 pts), Nível 5 (1000-1499 pts), e assim por diante até o Nível 10 (5500+ pts). Cada nível unlockeia novos badges!",
+    "categoria": "gamificacao"
+  },
+  {
+    "id": "badges_conquistas",
+    "pergunta": "Que badges posso conquistar?",
+    "palavras_chave": ["badges", "conquistas", "medalhas", "prêmios"],
+    "resposta": "Badges disponíveis: Comunicador (5+ posts), Organizador (10+ reservas), Gourmet (15+ trocas), Sociável (20+ comentários), Engajado (50+ curtidas), Ativo (500+ pts), Veterano (1000+ pts), Expert (2000+ pts), Lenda (3000+ pts), Consistente (7+ dias seguidos), Dedicado (30+ dias seguidos).",
+    "categoria": "gamificacao"
+  },
+  {
+    "id": "sala_aquario",
+    "pergunta": "O que é a Sala Aquário?",
+    "palavras_chave": ["sala", "aquário", "aquario", "vidro"],
+    "resposta": "A Sala Aquário é uma sala de reuniões com capacidade para 8 pessoas. Recebe esse nome por ter paredes de vidro, proporcionando transparência e amplitude visual. É ideal para reuniões de equipe e videoconferências.",
+    "categoria": "instalacoes"
+  },
+  {
+    "id": "sala_grande",
+    "pergunta": "Qual a capacidade da Sala Grande?",
+    "palavras_chave": ["sala", "grande", "capacidade", "pessoas"],
+    "resposta": "A Sala Grande comporta até 20 pessoas e é ideal para reuniões maiores, treinamentos, apresentações para equipes e eventos corporativos internos.",
+    "categoria": "instalacoes"
+  },
+  {
+    "id": "sala_pequena",
+    "pergunta": "Para que serve a Sala Pequena?",
+    "palavras_chave": ["sala", "pequena", "uso", "finalidade"],
+    "resposta": "A Sala Pequena tem capacidade para 6 pessoas e é perfeita para reuniões íntimas, conversas confidenciais, entrevistas ou discussões de projetos em grupos menores.",
+    "categoria": "instalacoes"
+  },
+  {
+    "id": "recepcao_reunioes",
+    "pergunta": "Posso usar a Recepção para reuniões?",
+    "palavras_chave": ["recepção", "reuniões", "usar", "disponível"],
+    "resposta": "Sim! A área da Recepção pode ser reservada para reuniões de até 4 pessoas. É um espaço mais informal, adequado para conversas rápidas ou atendimento a visitantes em ambiente mais acolhedor.",
+    "categoria": "instalacoes"
+  },
+  {
+    "id": "horario_almoco",
+    "pergunta": "Qual o horário do almoço?",
+    "palavras_chave": ["horário", "almoço", "almoco", "comida", "refeição"],
+    "resposta": "O horário do almoço é das 12h às 13h. Durante este período, você pode consultar o cardápio do dia no menu 'Cardápio' ou fazer trocas de proteínas (até 16h do dia anterior).",
+    "categoria": "empresa"
+  },
+  {
+    "id": "proteinas_opcoes",
+    "pergunta": "Quais proteínas posso escolher no cardápio?",
+    "palavras_chave": ["proteínas", "opções", "escolher", "trocar"],
+    "resposta": "As opções de proteínas para troca são: Frango, Omelete, Ovo frito e Ovo cozido. Você pode trocar a proteína do cardápio padrão por qualquer uma dessas opções até 16h do dia anterior.",
+    "categoria": "intranet"
+  },
+  {
+    "id": "prazo_trocas",
+    "pergunta": "Qual o prazo para trocar proteínas?",
+    "palavras_chave": ["prazo", "trocar", "proteínas", "deadline", "limite"],
+    "resposta": "O prazo para trocar proteínas é até 16h (4 da tarde) do dia anterior ao dia desejado. Por exemplo, para trocar a proteína de amanhã, você deve fazer a solicitação até hoje às 16h. Após este horário, não é possível fazer alterações.",
+    "categoria": "intranet"
+  },
+  {
+    "id": "visitantes_agendar",
+    "pergunta": "Como agendo visitas de clientes?",
+    "palavras_chave": ["visitantes", "clientes", "agendar", "visitas"],
+    "resposta": "Para agendar visitas de clientes: vá ao menu 'Reservas' → aba 'Agendamentos da Portaria' → preencha nome do visitante, documento, data, hora e observações. A portaria será notificada automaticamente.",
+    "categoria": "intranet"
+  },
+  {
+    "id": "documentos_visitantes",
+    "pergunta": "Que documentos preciso do visitante?",
+    "palavras_chave": ["documentos", "visitante", "identificação", "rg", "cpf"],
+    "resposta": "Para agendamentos da portaria, é recomendado ter: nome completo do visitante, documento de identificação (RG, CPF ou CNH), empresa que representa (se aplicável) e o motivo da visita.",
+    "categoria": "seguranca"
+  },
+  {
+    "id": "cancelar_reserva",
+    "pergunta": "Como cancelo uma reserva?",
+    "palavras_chave": ["cancelar", "reserva", "desfazer", "remover"],
+    "resposta": "Para cancelar uma reserva de sala, acesse o menu 'Reservas', encontre sua reserva no calendário e clique nela. Se você não conseguir cancelar pela interface, entre em contato com o RH ou TI para assistência.",
+    "categoria": "intranet"
+  },
+  {
+    "id": "equipamentos_tipos",
+    "pergunta": "Que tipos de equipamentos posso solicitar?",
+    "palavras_chave": ["tipos", "equipamentos", "disponíveis", "solicitar"],
+    "resposta": "Você pode solicitar: Notebook, Computador Desktop, Smartphone, Mouse, Teclado, Headset, Impressora ou outros equipamentos. Especifique o tipo, justifique a necessidade e defina a prioridade (baixa, média, alta).",
+    "categoria": "ti"
+  },
+  {
+    "id": "prioridade_solicitacoes",
+    "pergunta": "Como definir a prioridade das solicitações?",
+    "palavras_chave": ["prioridade", "solicitações", "urgente", "importante"],
+    "resposta": "Prioridades: BAIXA (não é urgente, pode aguardar), MÉDIA (necessário mas não urgente), ALTA (impacta o trabalho, precisa de atenção rápida). Seja honesto na avaliação para que o TI possa atender adequadamente.",
+    "categoria": "ti"
+  },
+  {
+    "id": "status_solicitacoes",
+    "pergunta": "Como acompanho o status das minhas solicitações?",
+    "palavras_chave": ["status", "acompanhar", "solicitações", "andamento"],
+    "resposta": "No menu 'Equipamentos', você vê todas as suas solicitações com status: Pendente (aguardando análise), Aprovado (será providenciado) ou Entregue (concluído). A equipe de TI atualiza o status conforme o andamento.",
+    "categoria": "ti"
+  },
+  {
+    "id": "perfil_usuario",
+    "pergunta": "Como atualizo meu perfil?",
+    "palavras_chave": ["perfil", "atualizar", "dados", "informações"],
+    "resposta": "Atualmente, as informações do perfil são gerenciadas pelo administrador do sistema. Para atualizar seus dados (nome, setor, foto), entre em contato com o RH ou TI que farão a alteração para você.",
+    "categoria": "suporte"
+  },
+  {
+    "id": "mobile_acesso",
+    "pergunta": "Posso acessar a intranet pelo celular?",
+    "palavras_chave": ["mobile", "celular", "smartphone", "responsivo"],
+    "resposta": "Sim! A intranet é totalmente responsiva e funciona perfeitamente em smartphones e tablets. Todos os recursos estão disponíveis na versão mobile com interface otimizada para telas menores.",
+    "categoria": "intranet"
+  },
+  {
+    "id": "notificacoes",
+    "pergunta": "Como funciona o sistema de notificações?",
+    "palavras_chave": ["notificações", "avisos", "alertas", "sino"],
+    "resposta": "O sistema de notificações (ícone do sino no cabeçalho) mostra alertas importantes como: novos posts no mural, aprovação de solicitações, lembretes de prazos e atualizações do sistema. Clique no sino para ver as notificações.",
+    "categoria": "intranet"
+  },
+  {
+    "id": "busca_intranet",
+    "pergunta": "Como uso a busca da intranet?",
+    "palavras_chave": ["busca", "pesquisar", "encontrar", "search"],
+    "resposta": "Use a barra de busca no cabeçalho (ícone da lupa) para pesquisar por pessoas no diretório, posts do mural, informações do cardápio ou qualquer conteúdo da intranet. A busca é inteligente e mostra resultados relevantes.",
+    "categoria": "intranet"
+  },
+  {
+    "id": "dados_empresa_gerais",
+    "pergunta": "Quais dados gerais sobre a empresa?",
+    "palavras_chave": ["dados", "empresa", "informações", "sobre"],
+    "resposta": "Grupo Cropfield: empresa do agronegócio presente em 14+ cidades (PR, RS, MT, MS, GO, BA, MA, TO, PA, MG, SP), com 150+ colaboradores e representantes, atuando em tecnologia agrícola, representação comercial e soluções para o campo.",
+    "categoria": "empresa"
+  },
+  {
+    "id": "contatos_emergencia",
+    "pergunta": "Quais são os contatos de emergência?",
+    "palavras_chave": ["emergência", "urgência", "contatos", "emergencia"],
+    "resposta": "Para emergências durante o horário comercial, entre em contato com a recepção através dos ramais disponíveis no Diretório. Para questões de TI urgentes, use o menu 'Equipamentos' marcando como prioridade ALTA.",
+    "categoria": "seguranca"
+  },
+  {
+    "id": "arquivos_compartilhados",
+    "pergunta": "Onde ficam os arquivos compartilhados?",
+    "palavras_chave": ["arquivos", "compartilhados", "documentos", "pastas"],
+    "resposta": "Atualmente, os arquivos são compartilhados através do 'Mural' onde podem ser anexados documentos às publicações. Para acesso a pastas compartilhadas específicas, consulte o setor de TI.",
+    "categoria": "ti"
+  },
+  {
+    "id": "seguranca_dados",
+    "pergunta": "Como a empresa protege meus dados?",
+    "palavras_chave": ["segurança", "dados", "proteção", "privacidade"],
+    "resposta": "Seus dados são protegidos através de: autenticação segura, backups automáticos, controle de acesso por perfil (admin/colaborador/RH), criptografia de senhas e logs de auditoria. Apenas pessoas autorizadas acessam informações confidenciais.",
+    "categoria": "seguranca"
+  },
+  {
+    "id": "feedback_sistema",
+    "pergunta": "Como dou feedback sobre a intranet?",
+    "palavras_chave": ["feedback", "sugestões", "melhorias", "sugestoes"],
+    "resposta": "Para dar feedback sobre a intranet: 1) Use este chat para sugestões rápidas, 2) Entre em contato com o TI através do menu 'Equipamentos', 3) Fale com o RH para sugestões de funcionalidades. Seu feedback é muito importante para melhorarmos!",
+    "categoria": "suporte"
+  },
+  {
+    "id": "treinamentos",
+    "pergunta": "Há treinamentos para usar a intranet?",
+    "palavras_chave": ["treinamentos", "capacitação", "aprender", "curso"],
+    "resposta": "Para treinamentos sobre o uso da intranet, consulte o RH. Além disso, este chatbot está aqui para tirar suas dúvidas em tempo real! Não hesite em perguntar sobre qualquer funcionalidade.",
+    "categoria": "rh"
+  },
+  {
+    "id": "manutencao_sistema",
+    "pergunta": "Quando há manutenção no sistema?",
+    "palavras_chave": ["manutenção", "sistema", "indisponível", "parado"],
+    "resposta": "Manutenções programadas são anunciadas com antecedência através do 'Mural'. Geralmente ocorrem fora do horário comercial para não impactar o trabalho. Em caso de manutenção não programada, o TI comunica imediatamente.",
+    "categoria": "ti"
+  },
+  {
+    "id": "performance_sistema",
+    "pergunta": "O sistema está lento, o que fazer?",
+    "palavras_chave": ["lento", "performance", "travando", "devagar"],
+    "resposta": "Se o sistema estiver lento: 1) Tente atualizar a página (F5), 2) Limpe o cache do navegador, 3) Verifique sua conexão de internet, 4) Se persistir, reporte o problema ao TI através do menu 'Equipamentos' com prioridade ALTA.",
+    "categoria": "suporte"
+  },
+  {
+    "id": "relatorios_admin",
+    "pergunta": "Como gero relatórios administrativos?",
+    "palavras_chave": ["relatórios", "admin", "exportar", "dados"],
+    "resposta": "Apenas administradores podem gerar relatórios. Acesse 'Painel Admin' → aba 'Relatórios' para exportar: Ranking de usuários (CSV/Excel/PDF), Relatório de atividades, Backup do sistema. Os arquivos são gerados automaticamente.",
+    "categoria": "admin"
+  },
+  {
+    "id": "usuarios_criar",
+    "pergunta": "Como criar novos usuários no sistema?",
+    "palavras_chave": ["criar", "usuários", "novo", "cadastrar"],
+    "resposta": "Apenas administradores podem criar usuários. No 'Painel Admin' → aba 'Usuários' → 'Novo Usuário', preencha: nome, email, senha (min. 6 chars), setor e perfil (colaborador/rh/admin). O usuário receberá as credenciais para primeiro acesso.",
+    "categoria": "admin"
+  },
+  {
+    "id": "permissoes_sistema",
+    "pergunta": "Quais são os níveis de permissão?",
+    "palavras_chave": ["permissões", "níveis", "acesso", "perfis"],
+    "resposta": "Temos 3 níveis: COLABORADOR (acesso básico), RH (pode criar posts no mural + colaborador), ADMIN (acesso total: gerenciar usuários, ver relatórios, painel administrativo). As permissões são definidas pelo setor e perfil do usuário.",
+    "categoria": "admin"
+  },
+  {
+    "id": "integracao_google",
+    "pergunta": "Como funciona a integração com Google?",
+    "palavras_chave": ["google", "integração", "oauth", "login"],
+    "resposta": "A integração com Google permite login único (SSO) usando sua conta Google corporativa. Se configurada, elimina a necessidade de lembrar senhas adicionais e agiliza o acesso à intranet.",
+    "categoria": "ti"
+  },
+  {
+    "id": "dados_pessoais",
+    "pergunta": "Como são tratados meus dados pessoais?",
+    "palavras_chave": ["dados", "pessoais", "lgpd", "privacidade"],
+    "resposta": "Seus dados pessoais são tratados conforme a LGPD: coletamos apenas dados necessários, usamos para finalidades específicas da intranet, mantemos segurança adequada e você pode solicitar alterações/exclusões através do RH.",
+    "categoria": "seguranca"
+  },
+  {
+    "id": "logs_auditoria",
+    "pergunta": "O sistema registra minhas atividades?",
+    "palavras_chave": ["logs", "auditoria", "atividades", "registro"],
+    "resposta": "Sim, o sistema registra atividades para gamificação (pontos e ranking) e auditoria de segurança. Dados como login, criação de reservas e interações são logados. Apenas administradores têm acesso aos logs completos.",
+    "categoria": "seguranca"
+  },
+  {
+    "id": "atualizacoes_sistema",
+    "pergunta": "Como fico sabendo de atualizações?",
+    "palavras_chave": ["atualizações", "novidades", "versões", "updates"],
+    "resposta": "Atualizações e novidades são comunicadas através do 'Mural' oficial. Funcionalidades novas, correções importantes e melhorias são sempre anunciadas lá. Mantenha-se atualizado acessando o mural regularmente!",
+    "categoria": "intranet"
+  }
+]
