@@ -27,30 +27,32 @@ const NAV: NavItem[] = [
   { to: '/aniversariantes', label: 'Aniversariantes', icon: Cake },
   { to: '/troca-proteina', label: 'Troca de Proteínas', icon: RefreshCw },
   { to: '/diretorio', label: 'Contatos', icon: Users },
-  { to: '/equipamentos', label: 'Equipamentos', icon: Monitor, adminOnly: true },
+  // >>> Equipamentos visível para todos (removido adminOnly)
+  { to: '/equipamentos', label: 'Equipamentos', icon: Monitor },
   { to: '/mural', label: 'Mural', icon: MessageSquare },
+  // Painel Admin continua restrito
   { to: '/admin', label: 'Painel Admin', icon: Settings, adminOnly: true },
 ];
 
 function SidebarImpl() {
   const { user } = useAuth();
-  
-  // Debug user data
+
+  // Debug leve (pode remover em produção)
   console.log('Sidebar user data:', user);
-  
-  // Simplified admin check - if any admin indicator is true
+
+  // Checagem de admin simplificada
   const isAdmin = !!user && (
     user.role === 'admin' ||
     user.role === 'moderador' ||
+    user.role === 'rh' ||
+    user.role === 'ti' ||
     user.email === 'admin@grupocropfield.com.br' ||
     user.sector === 'TI' || 
     user.sector === 'RH' ||
     user.setor === 'TI' ||
-    user.setor === 'RH' ||
-    user.role === 'rh' ||
-    user.role === 'ti'
+    user.setor === 'RH'
   );
-  
+
   console.log('Is admin:', isAdmin, 'User role:', user?.role, 'User sector:', user?.sector, 'User setor:', user?.setor);
 
   return (
@@ -73,11 +75,11 @@ function SidebarImpl() {
           if (item.to === '/admin') {
             return isAdmin;
           }
-          // Outros itens adminOnly: para admin/rh/ti
+          // Demais itens: se tiver adminOnly, também restringe
           if (item.adminOnly) {
             return isAdmin;
           }
-          // Itens normais: para todos
+          // Visível para todos
           return true;
         }).map(item => (
           <NavLink
