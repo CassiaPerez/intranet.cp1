@@ -21,12 +21,15 @@ interface EquipmentRequest {
   userEmail: string;
 }
 
-/** ========= Config/API helpers =========
- * Se tiver VITE_API_URL (ex.: https://api.suaempresa.com), usa ela.
- * Caso contrário, usa '' + '/api/...' (via proxy do Vite).
- */
+/** ========= Config/API helpers ========= */
 const BASE_API = import.meta.env.VITE_API_URL || '';
 
+const buildUrl = (path: string) => {
+  // Garante que concatenamos corretamente mesmo se BASE_API terminar com /
+  const base = BASE_API.replace(/\/+$/, '');
+  const p = path.startsWith('/') ? path : `/${path}`;
+  return `${base}${p}`;
+};
 
 /** ========= Utils ========= */
 function uid() {
@@ -119,6 +122,16 @@ const Equipamentos: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, isTI]);
 
+  const safeParseJson = async (response: Response, urlForLog: string) => {
+    const ctype = (response.headers.get('content-type') || '').toLowerCase();
+    if (!ctype.includes('application/json')) {
+      const body = await response.text().catch(() => '');
+      console.error('[Equipamentos] Resposta não-JSON de', urlForLog, 'status=', response.status, 'body(head)=', body?.slice(0, 400));
+      throw new Error('Resposta inválida da API (não é JSON)');
+    }
+    return response.json();
+  };
+
   const loadRequests = async () => {
     try {
       setListLoading(true);
@@ -135,9 +148,10 @@ const Equipamentos: React.FC = () => {
         path = `/api/ti/minhas?email=${email}`;
       }
 
-      const url = path;
+      const url = buildUrl(path);
       const response = await fetch(url, {
         headers: getAuthHeadersWithJson(user),
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -148,8 +162,17 @@ const Equipamentos: React.FC = () => {
         return;
       }
 
-      const data = await response.json();
+      let data: any;
+      try {
+        data = await safeParseJson(response, url);
+      } catch (err) {
+        toast.error('A API retornou uma resposta inválida ao listar solicitações.');
+        setRequests([]);
+        return;
+      }
+
       const rows: any[] = Array.isArray(data) ? data : (data.solicitacoes || []);
+
       const transformed: EquipmentRequest[] = rows.map((req: any) => ({
         id: String(req.id ?? req.uuid ?? uid()),
         equipment: String(req.titulo ?? req.equipment ?? 'Equipamento'),
@@ -157,8 +180,9 @@ const Equipamentos: React.FC = () => {
         priority: mapPriority(req.prioridade ?? req.priority),
         status: mapStatus(req.status),
         requestDate: toDate(req.created_at ?? req.createdAt),
-        user: String(req.nome ?? user?.name ?? 'Usuário'),
-        userEmail: String(req.email ?? user?.email ?? '').toLowerCase(),
+        user: String(req.nome ?? req.user ?? '—'),
+        // NÃO usar fallback para o e-mail do usuário logado aqui, para não “vazar” para o filtro
+        userEmail: String(req.email ?? '').toLowerCase(),
       }));
 
       const finalList = isTI
@@ -193,10 +217,11 @@ const Equipamentos: React.FC = () => {
 
     setSubmitting(true);
     try {
-      const url = '/api/ti/solicitacoes';
+      const url = buildUrl('/api/ti/solicitacoes');
       const res = await fetch(url, {
         method: 'POST',
         headers: getAuthHeadersWithJson(user),
+        credentials: 'include',
         body: JSON.stringify({
           titulo: equipmentName,
           descricao: `Prioridade: ${formData.priority}\nJustificativa: ${formData.justification}`,
@@ -237,7 +262,7 @@ const Equipamentos: React.FC = () => {
 
   const TitleRight = () => {
     if (isTI) return <div className="text-sm text-gray-600">{requests.length} solicitações totais</div>;
-    return null;
+    return <div className="text-sm text-gray-600">{requests.length} solicitações suas</div>;
   };
 
   return (
