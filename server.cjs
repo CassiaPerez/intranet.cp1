@@ -45,6 +45,22 @@ if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 const dbPath = path.join(dataDir, 'database.sqlite');
 const db = new sqlite3.Database(dbPath);
 
+// --- Helpers de DB ---
+const ensureColumn = (table, column, def) => new Promise((resolve) => {
+  db.all(`PRAGMA table_info(${table})`, (e, rows) => {
+    if (e) { console.warn(`[DB] PRAGMA erro: ${table}`, e.message); return resolve(false); }
+    const exists = (rows || []).some(r => r.name === column);
+    if (exists) return resolve(true);
+    db.run(`ALTER TABLE ${table} ADD COLUMN ${column} ${def}`, (err) => {
+      if (err) console.warn(`[DB] ALTER TABLE falhou (${table}.${column})`, err.message);
+      else console.log(`🧩 Coluna adicionada: ${table}.${column}`);
+      resolve(!err);
+    });
+  });
+});
+
+const runSeries = (tasks) => tasks.reduce((p, fn) => p.then(fn), Promise.resolve());
+
 // --- DB Init ---
 db.serialize(() => {
   db.run('PRAGMA foreign_keys = ON');
@@ -111,6 +127,7 @@ db.serialize(() => {
     post_id INTEGER NOT NULL,
     usuario_id TEXT NOT NULL,
     texto TEXT NOT NULL,
+    oculto INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (post_id) REFERENCES mural_posts (id),
     FOREIGN KEY (usuario_id) REFERENCES usuarios (id)
@@ -182,6 +199,15 @@ db.serialize(() => {
   db.run('CREATE INDEX IF NOT EXISTS idx_trocas_user_data ON trocas_proteina (usuario_id, data)');
 });
 
+// --- Migrações leves (adiciona flags sem quebrar schema existente) ---
+runSeries([
+  () => ensureColumn('usuarios', 'can_publish_mural', 'INTEGER DEFAULT 0'),
+  () => ensureColumn('usuarios', 'can_moderate_mural', 'INTEGER DEFAULT 0'),
+  () => ensureColumn('mural_comments', 'oculto', 'INTEGER DEFAULT 0')
+]).then(() => {
+  console.log('✅ Migrações/flags validadas');
+});
+
 // --- Middlewares ---
 const allowedOrigins = [
   'http://localhost:5173',
@@ -236,7 +262,7 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
 
   passport.serializeUser((user, done) => done(null, user.id));
   passport.deserializeUser((id, done) => {
-    db.get('SELECT * FROM usuarios WHERE id = ? AND ativo = 1', [id], (err, user) => done(err, user));
+    db.get('SELECT * FROM usuarios WHERE id = ? AND ativo = 1', (id ? [id] : []), (err, user) => done(err, user));
   });
 
   app.use(passport.initialize());
@@ -245,7 +271,7 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
   console.log('⚠️ Google OAuth não configurado - defina GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET');
 }
 
-// --- Helpers ---
+// --- Helpers de auth/perm ---
 const authenticateToken = (req, res, next) => {
   const header = req.headers.authorization || '';
   const bearer = header.replace(/^Bearer\s+/i, '');
@@ -261,18 +287,31 @@ const authenticateToken = (req, res, next) => {
 
 const userSector = (u) => u?.setor || u?.sector || null;
 
+const isPrivileged = (u) => {
+  const role = u?.role;
+  const setor = userSector(u);
+  return role === 'admin' || role === 'moderador' || role === 'rh' || setor === 'TI' || setor === 'RH';
+};
+
 const requirePublisher = (req, res, next) => {
-  const role = req.user?.role;
-  const setor = userSector(req.user);
-  if (role === 'admin' || role === 'moderador' || role === 'rh' || setor === 'TI' || setor === 'RH') return next();
-  return res.status(403).json({ error: 'Apenas TI/RH/Moderador/Admin podem publicar no mural' });
+  if (req.user?.can_publish_mural === 1) return next();
+  if (isPrivileged(req.user)) return next();
+  return res.status(403).json({ error: 'Apenas TI/RH/Moderador/Admin (ou com permissão) podem publicar no mural' });
 };
 
 const requireModeratorOrAdmin = (req, res, next) => {
+  if (req.user?.can_moderate_mural === 1) return next();
   const role = req.user?.role;
   const setor = userSector(req.user);
   if (role === 'admin' || role === 'moderador' || role === 'rh' || setor === 'TI') return next();
-  return res.status(403).json({ error: 'Apenas Admin/Moderador/RH/TI podem moderar comentários' });
+  return res.status(403).json({ error: 'Apenas Admin/Moderador/RH/TI (ou com permissão) podem moderar comentários' });
+};
+
+const requireAdminOrHRorTI = (req, res, next) => {
+  const role = req.user?.role;
+  const setor = userSector(req.user);
+  if (role === 'admin' || role === 'rh' || setor === 'TI' || role === 'moderador') return next();
+  return res.status(403).json({ error: 'Acesso restrito ao painel de usuários (Admin/RH/TI/Moderador)' });
 };
 
 const addPoints = (userId, acao, pontos, descricao = null) => {
@@ -280,7 +319,7 @@ const addPoints = (userId, acao, pontos, descricao = null) => {
   db.run('UPDATE usuarios SET pontos_gamificacao = pontos_gamificacao + ? WHERE id = ?', [pontos, userId]);
 };
 
-// --- Moderation list (atenção a falsos positivos em produção) ---
+// --- Lista de moderação (atenção a falsos positivos em produção) ---
 const PALAVRAS_PROIBIDAS = [
   'porra','caralho','merda','bosta','cacete','droga','inferno',
   'burro','idiota','imbecil','estupido','otario','babaca','trouxa','palhaco','ridiculo',
@@ -316,7 +355,7 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
       if (!user) return res.redirect('/login?error=authentication_failed');
 
       const token = jwt.sign(
-        { id: user.id, email: user.email, role: user.role, name: user.nome, setor: user.setor, sector: user.setor },
+        { id: user.id, email: user.email, role: user.role, name: user.nome, setor: user.setor, sector: user.setor, can_publish_mural: user.can_publish_mural || 0, can_moderate_mural: user.can_moderate_mural || 0 },
         JWT_SECRET,
         { expiresIn: '24h' }
       );
@@ -346,13 +385,13 @@ app.post('/auth/login', (req, res) => {
     if (!user || !bcrypt.compareSync(password, user.senha)) return res.status(401).json({ error: 'Credenciais inválidas' });
 
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role, name: user.nome, setor: user.setor, sector: user.setor },
+      { id: user.id, email: user.email, role: user.role, name: user.nome, setor: user.setor, sector: user.setor, can_publish_mural: user.can_publish_mural || 0, can_moderate_mural: user.can_moderate_mural || 0 },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
 
     res.cookie('token', token, { httpOnly: true, secure: false, sameSite: 'lax', maxAge: 24 * 60 * 60 * 1000 });
-    res.json({ user: { id: user.id, name: user.nome, email: user.email, setor: user.setor, sector: user.setor, role: user.role, token } });
+    res.json({ user: { id: user.id, name: user.nome, email: user.email, setor: user.setor, sector: user.setor, role: user.role, can_publish_mural: user.can_publish_mural || 0, can_moderate_mural: user.can_moderate_mural || 0, token } });
   });
 });
 
@@ -366,13 +405,13 @@ app.post('/login-admin', (req, res) => {
     if (!user || !bcrypt.compareSync(password, user.senha)) return res.status(401).json({ error: 'Credenciais inválidas' });
 
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role, name: user.nome, setor: user.setor, sector: user.setor },
+      { id: user.id, email: user.email, role: user.role, name: user.nome, setor: user.setor, sector: user.setor, can_publish_mural: user.can_publish_mural || 0, can_moderate_mural: user.can_moderate_mural || 0 },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
 
     res.cookie('token', token, { httpOnly: true, secure: false, sameSite: 'lax', maxAge: 24 * 60 * 60 * 1000 });
-    res.json({ user: { id: user.id, name: user.nome, email: user.email, setor: user.setor, sector: user.setor, role: user.role, token } });
+    res.json({ user: { id: user.id, name: user.nome, email: user.email, setor: user.setor, sector: user.setor, role: user.role, can_publish_mural: user.can_publish_mural || 0, can_moderate_mural: user.can_moderate_mural || 0, token } });
   });
 });
 
@@ -380,9 +419,86 @@ app.post('/auth/logout', (_req, res) => { res.clearCookie('token'); res.json({ m
 
 // Me
 app.get('/api/me', authenticateToken, (req, res) => {
-  db.get('SELECT id, nome, email, setor, role FROM usuarios WHERE id = ?', [req.user.id], (err, user) => {
+  db.get('SELECT id, nome, email, setor, role, can_publish_mural, can_moderate_mural FROM usuarios WHERE id = ?', [req.user.id], (err, user) => {
     if (err || !user) return res.status(404).json({ error: 'User not found' });
-    res.json({ user: { id: user.id, name: user.nome, email: user.email, setor: user.setor, sector: user.setor, role: user.role } });
+    res.json({ user: { id: user.id, name: user.nome, email: user.email, setor: user.setor, sector: user.setor, role: user.role, can_publish_mural: user.can_publish_mural || 0, can_moderate_mural: user.can_moderate_mural || 0 } });
+  });
+});
+
+// --- Admin: Usuários (resolve 404 /api/admin/users) ---
+app.get('/api/admin/users', authenticateToken, requireAdminOrHRorTI, (req, res) => {
+  const q = (req.query?.q || '').trim();
+  let sql = `SELECT id, nome, email, setor, role, ativo, pontos_gamificacao, can_publish_mural, can_moderate_mural, created_at, updated_at FROM usuarios`;
+  const params = [];
+  if (q) {
+    sql += ` WHERE nome LIKE ? OR email LIKE ? OR setor LIKE ? OR role LIKE ?`;
+    params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
+  }
+  sql += ` ORDER BY created_at DESC`;
+  db.all(sql, params, (err, rows) => {
+    if (err) return res.status(500).json({ error: 'Erro ao listar usuários' });
+    res.json({ users: rows });
+  });
+});
+
+app.get('/api/admin/users/:id', authenticateToken, requireAdminOrHRorTI, (req, res) => {
+  db.get(`SELECT id, nome, email, setor, role, ativo, pontos_gamificacao, can_publish_mural, can_moderate_mural, created_at, updated_at FROM usuarios WHERE id = ?`, [req.params.id], (err, row) => {
+    if (err) return res.status(500).json({ error: 'Erro ao carregar usuário' });
+    if (!row) return res.status(404).json({ error: 'Usuário não encontrado' });
+    res.json({ user: row });
+  });
+});
+
+app.post('/api/admin/users', authenticateToken, requireAdminOrHRorTI, (req, res) => {
+  const { id, nome, email, senha, setor = 'Geral', role = 'colaborador', ativo = 1, can_publish_mural = 0, can_moderate_mural = 0 } = req.body || {};
+  if (!id || !nome || !email || !senha) return res.status(400).json({ error: 'id, nome, email e senha são obrigatórios' });
+
+  const hashed = bcrypt.hashSync(String(senha), 10);
+  const sql = `INSERT INTO usuarios (id, nome, email, senha, setor, role, ativo, can_publish_mural, can_moderate_mural) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+  db.run(sql, [id, nome, email, hashed, setor, role, Number(ativo), Number(can_publish_mural), Number(can_moderate_mural)], function (err) {
+    if (err) return res.status(500).json({ error: 'Erro ao criar usuário', details: err.message });
+    res.json({ created: true, id });
+  });
+});
+
+app.put('/api/admin/users/:id', authenticateToken, requireAdminOrHRorTI, (req, res) => {
+  const fields = ['nome','email','setor','role','ativo','can_publish_mural','can_moderate_mural'];
+  const sets = [];
+  const params = [];
+  fields.forEach(f => {
+    if (req.body?.[f] !== undefined) {
+      sets.push(`${f} = ?`);
+      params.push(f.startsWith('can_') || f === 'ativo' ? Number(req.body[f]) : req.body[f]);
+    }
+  });
+  if (sets.length === 0) return res.status(400).json({ error: 'Nenhum campo para atualizar' });
+  sets.push('updated_at = CURRENT_TIMESTAMP');
+  params.push(req.params.id);
+
+  const sql = `UPDATE usuarios SET ${sets.join(', ')} WHERE id = ?`;
+  db.run(sql, params, function (err) {
+    if (err) return res.status(500).json({ error: 'Erro ao atualizar usuário', details: err.message });
+    if (this.changes === 0) return res.status(404).json({ error: 'Usuário não encontrado' });
+    res.json({ updated: true });
+  });
+});
+
+app.put('/api/admin/users/:id/password', authenticateToken, requireAdminOrHRorTI, (req, res) => {
+  const { novaSenha } = req.body || {};
+  if (!novaSenha) return res.status(400).json({ error: 'novaSenha é obrigatória' });
+  const hashed = bcrypt.hashSync(String(novaSenha), 10);
+  db.run(`UPDATE usuarios SET senha = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [hashed, req.params.id], function (err) {
+    if (err) return res.status(500).json({ error: 'Erro ao atualizar senha' });
+    if (this.changes === 0) return res.status(404).json({ error: 'Usuário não encontrado' });
+    res.json({ passwordUpdated: true });
+  });
+});
+
+app.delete('/api/admin/users/:id', authenticateToken, requireAdminOrHRorTI, (req, res) => {
+  db.run(`DELETE FROM usuarios WHERE id = ?`, [req.params.id], function (err) {
+    if (err) return res.status(500).json({ error: 'Erro ao remover usuário' });
+    if (this.changes === 0) return res.status(404).json({ error: 'Usuário não encontrado' });
+    res.json({ deleted: true });
   });
 });
 
@@ -392,7 +508,7 @@ app.get('/api/mural/posts', authenticateToken, (_req, res) => {
     SELECT mp.id, mp.titulo, mp.conteudo, mp.pinned, mp.created_at,
            u.nome as author,
            (SELECT COUNT(*) FROM mural_likes ml WHERE ml.post_id = mp.id) as likes_count,
-           (SELECT COUNT(*) FROM mural_comments mc WHERE mc.post_id = mp.id) as comments_count
+           (SELECT COUNT(*) FROM mural_comments mc WHERE mc.post_id = mp.id AND mc.oculto = 0) as comments_count
     FROM mural_posts mp
     JOIN usuarios u ON mp.usuario_id = u.id
     WHERE mp.ativo = 1
@@ -443,8 +559,8 @@ app.post('/api/mural/:postId/comments', authenticateToken, (req, res) => {
   if (!texto) return res.status(400).json({ error: 'Texto do comentário é obrigatório' });
 
   if (contemPalavraProibida(texto)) {
-    return res.status(400).json({ 
-      error: 'Comentário contém linguagem inapropriada e foi bloqueado pela moderação automática' 
+    return res.status(400).json({
+      error: 'Comentário contém linguagem inapropriada e foi bloqueado pela moderação automática'
     });
   }
 
@@ -459,11 +575,12 @@ app.post('/api/mural/:postId/comments', authenticateToken, (req, res) => {
 
 app.get('/api/mural/:postId/comments', authenticateToken, (req, res) => {
   const { postId } = req.params;
+  const verOcultos = isPrivileged(req.user) || (req.user?.can_moderate_mural === 1);
   const q = `
-    SELECT mc.id, mc.texto, mc.created_at, u.nome as author
+    SELECT mc.id, mc.texto, mc.oculto, mc.created_at, u.nome as author
     FROM mural_comments mc
     JOIN usuarios u ON mc.usuario_id = u.id
-    WHERE mc.post_id = ?
+    WHERE mc.post_id = ? ${verOcultos ? '' : 'AND mc.oculto = 0'}
     ORDER BY mc.created_at ASC
   `;
   db.all(q, [postId], (err, rows) => {
@@ -472,10 +589,25 @@ app.get('/api/mural/:postId/comments', authenticateToken, (req, res) => {
   });
 });
 
-// Deletar comentário (moderação)
+// Moderação: ocultar/reexibir/deletar
+app.put('/api/mural/comments/:commentId/hide', authenticateToken, requireModeratorOrAdmin, (req, res) => {
+  db.run('UPDATE mural_comments SET oculto = 1 WHERE id = ?', [req.params.commentId], function (err) {
+    if (err) return res.status(500).json({ error: 'Erro ao ocultar comentário' });
+    if (this.changes === 0) return res.status(404).json({ error: 'Comentário não encontrado' });
+    res.json({ hidden: true });
+  });
+});
+
+app.put('/api/mural/comments/:commentId/unhide', authenticateToken, requireModeratorOrAdmin, (req, res) => {
+  db.run('UPDATE mural_comments SET oculto = 0 WHERE id = ?', [req.params.commentId], function (err) {
+    if (err) return res.status(500).json({ error: 'Erro ao reexibir comentário' });
+    if (this.changes === 0) return res.status(404).json({ error: 'Comentário não encontrado' });
+    res.json({ unhidden: true });
+  });
+});
+
 app.delete('/api/mural/comments/:commentId', authenticateToken, requireModeratorOrAdmin, (req, res) => {
-  const { commentId } = req.params;
-  db.run('DELETE FROM mural_comments WHERE id = ?', [commentId], function (err) {
+  db.run('DELETE FROM mural_comments WHERE id = ?', [req.params.commentId], function (err) {
     if (err) return res.status(500).json({ error: 'Erro ao deletar comentário' });
     if (this.changes === 0) return res.status(404).json({ error: 'Comentário não encontrado' });
     res.json({ success: true, message: 'Comentário removido pela moderação' });
@@ -641,13 +773,9 @@ app.post('/api/portaria/agendamentos', authenticateToken, (req, res) => {
   );
 });
 
-// --- Admin (amostras de export) ---
+// --- Admin Dashboard ---
 app.get('/api/admin/dashboard', authenticateToken, (req, res) => {
-  const role = req.user?.role;
-  const setor = userSector(req.user);
-  if (role !== 'admin' && role !== 'rh' && role !== 'moderador' && setor !== 'TI' && setor !== 'RH') {
-    return res.status(403).json({ error: 'Acesso negado' });
-  }
+  if (!isPrivileged(req.user)) return res.status(403).json({ error: 'Acesso negado' });
 
   const stats = {};
   const ps = [
@@ -672,13 +800,11 @@ app.get('/api/admin/dashboard', authenticateToken, (req, res) => {
   });
 });
 
-// (Demais rotas de export omitidas por brevidade — mantenha as suas existentes)
-
 // --- Health/Ping ---
 app.get('/api/health', (_req, res) => res.json({ status: 'OK', timestamp: new Date().toISOString() }));
 app.get('/api/ping', (_req, res) => res.send('pong'));
 
-// --- 404 para APIs (Express 5: sem "/api/*")
+// --- 404 para APIs (Express 5: sem curingas do tipo "/api/*")
 app.use('/api', (req, res) => {
   res.status(404).json({ error: 'API endpoint not found', path: req.path, method: req.method });
 });
