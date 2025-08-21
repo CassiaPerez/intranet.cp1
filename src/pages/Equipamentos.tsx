@@ -1,9 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Layout } from '../components/Layout';
-import { 
-  Monitor, Smartphone, Mouse, Keyboard, Headphones, Printer, 
-  Send, CheckCircle, RefreshCw, Trash2, Check 
-} from 'lucide-react';
+import { Monitor, Smartphone, Mouse, Keyboard, Headphones, Printer, Send, CheckCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { useGamification } from '../contexts/GamificationContext';
@@ -24,14 +21,12 @@ interface EquipmentRequest {
   userEmail: string;
 }
 
-/** ========= Config/API helpers ========= */
+/** ========= Config/API helpers =========
+ * Se tiver VITE_API_URL (ex.: https://api.suaempresa.com), usa ela.
+ * Caso contrário, usa '' + '/api/...' (via proxy do Vite).
+ */
 const BASE_API = import.meta.env.VITE_API_URL || '';
 
-const buildUrl = (path: string) => {
-  const base = BASE_API.replace(/\/+$/, '');
-  const p = path.startsWith('/') ? path : `/${path}`;
-  return `${base}${p}`;
-};
 
 /** ========= Utils ========= */
 function uid() {
@@ -64,10 +59,6 @@ const toDate = (v: any) => {
   return isNaN(d.getTime()) ? new Date() : d;
 };
 
-const authHeaders = (user: any) => ({
-  ...(getAuthHeadersWithJson?.(user) || { 'Content-Type': 'application/json' }),
-});
-
 /** ========= Página ========= */
 const Equipamentos: React.FC = () => {
   const { user } = useAuth();
@@ -82,7 +73,6 @@ const Equipamentos: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [listLoading, setListLoading] = useState(false);
   const [requests, setRequests] = useState<EquipmentRequest[]>([]);
-  const [workingId, setWorkingId] = useState<string | null>(null); // ação TI em andamento
 
   const isTI = useMemo(() => {
     const setor = (user as any)?.sector ?? (user as any)?.setor;
@@ -129,16 +119,6 @@ const Equipamentos: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, isTI]);
 
-  const safeParseJson = async (response: Response, urlForLog: string) => {
-    const ctype = (response.headers.get('content-type') || '').toLowerCase();
-    if (!ctype.includes('application/json')) {
-      const body = await response.text().catch(() => '');
-      console.error('[Equipamentos] Resposta não-JSON de', urlForLog, 'status=', response.status, 'body(head)=', body?.slice(0, 400));
-      throw new Error('Resposta inválida da API (não é JSON)');
-    }
-    return response.json();
-  };
-
   const loadRequests = async () => {
     try {
       setListLoading(true);
@@ -155,10 +135,9 @@ const Equipamentos: React.FC = () => {
         path = `/api/ti/minhas?email=${email}`;
       }
 
-      const url = buildUrl(path);
+      const url = path;
       const response = await fetch(url, {
-        headers: authHeaders(user),
-        credentials: 'include',
+        headers: getAuthHeadersWithJson(user),
       });
 
       if (!response.ok) {
@@ -169,15 +148,7 @@ const Equipamentos: React.FC = () => {
         return;
       }
 
-      let data: any;
-      try {
-        data = await safeParseJson(response, url);
-      } catch (err) {
-        toast.error('A API retornou uma resposta inválida ao listar solicitações.');
-        setRequests([]);
-        return;
-      }
-
+      const data = await response.json();
       const rows: any[] = Array.isArray(data) ? data : (data.solicitacoes || []);
       const transformed: EquipmentRequest[] = rows.map((req: any) => ({
         id: String(req.id ?? req.uuid ?? uid()),
@@ -186,8 +157,8 @@ const Equipamentos: React.FC = () => {
         priority: mapPriority(req.prioridade ?? req.priority),
         status: mapStatus(req.status),
         requestDate: toDate(req.created_at ?? req.createdAt),
-        user: String(req.nome ?? req.user ?? '—'),
-        userEmail: String(req.email ?? '').toLowerCase(), // sem fallback p/ evitar falso match
+        user: String(req.nome ?? user?.name ?? 'Usuário'),
+        userEmail: String(req.email ?? user?.email ?? '').toLowerCase(),
       }));
 
       const finalList = isTI
@@ -222,11 +193,10 @@ const Equipamentos: React.FC = () => {
 
     setSubmitting(true);
     try {
-      const url = buildUrl('/api/ti/solicitacoes');
+      const url = '/api/ti/solicitacoes';
       const res = await fetch(url, {
         method: 'POST',
-        headers: authHeaders(user),
-        credentials: 'include',
+        headers: getAuthHeadersWithJson(user),
         body: JSON.stringify({
           titulo: equipmentName,
           descricao: `Prioridade: ${formData.priority}\nJustificativa: ${formData.justification}`,
@@ -254,6 +224,7 @@ const Equipamentos: React.FC = () => {
       } catch {}
 
       toast.success('Solicitação enviada com sucesso! O setor de TI foi notificado.');
+
       setFormData({ equipment: '', customEquipment: '', justification: '', priority: 'medium' });
       await loadRequests();
     } catch (error) {
@@ -264,72 +235,10 @@ const Equipamentos: React.FC = () => {
     }
   };
 
-  /** ===== Ações TI ===== */
-  const updateStatus = async (id: string, newStatus: StatusFE) => {
-    setWorkingId(id);
-    try {
-      const url = buildUrl(`/api/ti/solicitacoes/${encodeURIComponent(id)}/status`);
-      const res = await fetch(url, {
-        method: 'PUT',
-        headers: authHeaders(user),
-        credentials: 'include',
-        body: JSON.stringify({ status: newStatus }),
-      });
-      if (!res.ok) {
-        const t = await res.text().catch(() => '');
-        console.error('[Equipamentos] PUT status', url, res.status, t?.slice(0, 300));
-        toast.error(`Falha ao atualizar status (${res.status})`);
-        return;
-      }
-      toast.success(newStatus === 'approved' ? 'Solicitação aprovada.' : 'Solicitação entregue.');
-      await loadRequests();
-    } catch (e) {
-      console.error(e);
-      toast.error('Erro ao atualizar status.');
-    } finally {
-      setWorkingId(null);
-    }
+  const TitleRight = () => {
+    if (isTI) return <div className="text-sm text-gray-600">{requests.length} solicitações totais</div>;
+    return null;
   };
-
-  const removeRequest = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir esta solicitação?')) return;
-    setWorkingId(id);
-    try {
-      const url = buildUrl(`/api/ti/solicitacoes/${encodeURIComponent(id)}`);
-      const res = await fetch(url, {
-        method: 'DELETE',
-        headers: authHeaders(user),
-        credentials: 'include',
-      });
-      if (!res.ok) {
-        const t = await res.text().catch(() => '');
-        console.error('[Equipamentos] DELETE', url, res.status, t?.slice(0, 300));
-        toast.error(`Falha ao excluir (${res.status})`);
-        return;
-      }
-      toast.success('Solicitação excluída.');
-      setRequests(prev => prev.filter(r => r.id !== id));
-    } catch (e) {
-      console.error(e);
-      toast.error('Erro ao excluir.');
-    } finally {
-      setWorkingId(null);
-    }
-  };
-
-  const TitleRight = () => (
-    <div className="flex items-center gap-3 text-sm text-gray-600">
-      <button
-        onClick={loadRequests}
-        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50"
-        title="Recarregar"
-      >
-        <RefreshCw className="w-4 h-4" />
-        Recarregar
-      </button>
-      <span>{isTI ? `${requests.length} solicitações totais` : `${requests.length} suas solicitações`}</span>
-    </div>
-  );
 
   return (
     <Layout>
@@ -423,11 +332,9 @@ const Equipamentos: React.FC = () => {
 
         {/* Lista */}
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">
-              {isTI ? 'Todas as Solicitações' : 'Minhas Solicitações'}
-            </h2>
-          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">
+            {isTI ? 'Todas as Solicitações' : 'Minhas Solicitações'}
+          </h2>
 
           {listLoading ? (
             <div className="text-center py-12 text-gray-500">Carregando...</div>
@@ -443,9 +350,9 @@ const Equipamentos: React.FC = () => {
                   key={request.id}
                   className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 transition-colors"
                 >
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <div className="flex items-center flex-wrap gap-2 mb-2">
+                      <div className="flex items-center space-x-3 mb-2">
                         <h3 className="font-semibold text-gray-900">{request.equipment}</h3>
                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${priorityColors[request.priority]}`}>
                           {priorityLabels[request.priority]}
@@ -459,57 +366,14 @@ const Equipamentos: React.FC = () => {
                         {request.justification}
                       </p>
 
-                      <div className="flex items-center flex-wrap gap-3 text-xs text-gray-500">
+                      <div className="flex items-center space-x-4 text-xs text-gray-500">
                         <span>Solicitado por: {request.user}</span>
                         <span>•</span>
                         <span>{formatDateBR(request.requestDate)}</span>
-                        {isTI && request.userEmail && (
-                          <>
-                            <span>•</span>
-                            <span>{request.userEmail}</span>
-                          </>
-                        )}
                       </div>
                     </div>
 
-                    {/* Ações TI */}
-                    {isTI && (
-                      <div className="flex items-center gap-2">
-                        {request.status === 'pending' && (
-                          <button
-                            onClick={() => updateStatus(request.id, 'approved')}
-                            disabled={workingId === request.id}
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-blue-200 text-blue-700 hover:bg-blue-50 disabled:opacity-50"
-                            title="Aprovar"
-                          >
-                            <Check className="w-4 h-4" />
-                            Aprovar
-                          </button>
-                        )}
-                        {(request.status === 'approved' || request.status === 'pending') && (
-                          <button
-                            onClick={() => updateStatus(request.id, 'delivered')}
-                            disabled={workingId === request.id}
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-green-200 text-green-700 hover:bg-green-50 disabled:opacity-50"
-                            title="Marcar como Entregue"
-                          >
-                            <CheckCircle className="w-4 h-4" />
-                            Entregue
-                          </button>
-                        )}
-                        <button
-                          onClick={() => removeRequest(request.id)}
-                          disabled={workingId === request.id}
-                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-red-200 text-red-700 hover:bg-red-50 disabled:opacity-50"
-                          title="Excluir"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          Excluir
-                        </button>
-                      </div>
-                    )}
-
-                    {request.status === 'delivered' && !isTI && (
+                    {request.status === 'delivered' && (
                       <CheckCircle className="w-6 h-6 text-green-500 flex-shrink-0" />
                     )}
                   </div>
