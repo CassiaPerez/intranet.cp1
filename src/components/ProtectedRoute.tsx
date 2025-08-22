@@ -1,32 +1,52 @@
-import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import React, { ReactNode } from 'react';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-export function isPrivileged(user: any) {
-  const role = user?.role?.toLowerCase?.() || '';
-  const setor = (user?.sector || user?.setor || '').toString().toUpperCase();
-  return role === 'admin' || role === 'moderador' || role === 'rh' || setor === 'TI' || setor === 'RH';
+interface ProtectedRouteProps {
+  children: ReactNode;
+  requireAdmin?: boolean;
 }
 
-export default function ProtectedRoute({
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
   children,
-  adminOnly = false,
-}: {
-  children: React.ReactNode;
-  adminOnly?: boolean;
-}) {
-  const { user, loading } = useAuth();
-  const location = useLocation();
+  requireAdmin = false
+}) => {
+  const { isAuthenticated, loading, user } = useAuth();
 
-  if (loading) return null; // ou um spinner/skeleton
-
-  if (!user) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando...</p>
+        </div>
+      </div>
+    );
   }
 
-  if (adminOnly && !isPrivileged(user)) {
-    return <Navigate to="/" replace />;
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (requireAdmin) {
+    const isAdmin = !!user && (
+      user.role === 'admin' || 
+      user.role === 'moderador' ||
+      user.email === 'admin@grupocropfield.com.br' ||
+      user.sector === 'TI' || 
+      user.sector === 'RH' ||
+      user.setor === 'TI' ||
+      user.setor === 'RH' ||
+      user.role === 'rh' ||
+      user.role === 'ti'
+    );
+    
+    console.log('ProtectedRoute admin check:', isAdmin, user);
+    
+    if (!isAdmin) {
+      return <Navigate to="/" replace />;
+    }
   }
 
   return <>{children}</>;
-}
+};
