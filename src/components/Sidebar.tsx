@@ -1,109 +1,60 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { NavLink } from 'react-router-dom';
+import { Home, Calendar, Megaphone, Monitor, Shield, Users } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { 
-  Home, 
-  Calendar, 
-  UtensilsCrossed, 
-  Cake,
-  RefreshCw,
-  Users, 
-  Monitor, 
-  MessageSquare,
-  Settings 
-} from 'lucide-react';
+import { isPrivileged } from './ProtectedRoute';
 
-type NavItem = { 
-  to: string; 
-  label: string; 
+type NavItem = {
+  to: string;
+  label: string;
   icon: React.ComponentType<any>;
-  adminOnly?: boolean; 
+  adminOnly?: boolean;
 };
 
-const NAV: NavItem[] = [
+const BASE_NAV: NavItem[] = [
   { to: '/', label: 'Dashboard', icon: Home },
   { to: '/reservas', label: 'Reservas', icon: Calendar },
-  { to: '/cardapio', label: 'Cardápio', icon: UtensilsCrossed },
-  { to: '/aniversariantes', label: 'Aniversariantes', icon: Cake },
-  { to: '/troca-proteina', label: 'Troca de Proteínas', icon: RefreshCw },
-  { to: '/diretorio', label: 'Contatos', icon: Users },
-  // >>> Equipamentos visível para todos (removido adminOnly)
-  { to: '/equipamentos', label: 'Equipamentos', icon: Monitor },
-  { to: '/mural', label: 'Mural', icon: MessageSquare },
-  // Painel Admin continua restrito
-  { to: '/admin', label: 'Painel Admin', icon: Settings, adminOnly: true },
+  { to: '/mural', label: 'Mural', icon: Megaphone },
+  { to: '/equipamentos', label: 'Equipamentos', icon: Monitor },        // <- SEM adminOnly
+  { to: '/admin', label: 'Admin', icon: Shield, adminOnly: true },
+  { to: '/admin/usuarios', label: 'Usuários', icon: Users, adminOnly: true },
 ];
 
-function SidebarImpl() {
-  const { user } = useAuth();
+export default function Sidebar() {
+  const { user, loading } = useAuth();
 
-  // Debug leve (pode remover em produção)
-  console.log('Sidebar user data:', user);
+  // Enquanto carregando, evita filtrar errado
+  const items = useMemo(() => {
+    if (loading) return [];
+    const privileged = isPrivileged(user);
 
-  // Checagem de admin simplificada
-  const isAdmin = !!user && (
-    user.role === 'admin' ||
-    user.role === 'moderador' ||
-    user.role === 'rh' ||
-    user.role === 'ti' ||
-    user.email === 'admin@grupocropfield.com.br' ||
-    user.sector === 'TI' || 
-    user.sector === 'RH' ||
-    user.setor === 'TI' ||
-    user.setor === 'RH'
-  );
-
-  console.log('Is admin:', isAdmin, 'User role:', user?.role, 'User sector:', user?.sector, 'User setor:', user?.setor);
+    // regra: sempre incluir /equipamentos, filtrar demais por adminOnly
+    return BASE_NAV.filter((item) => {
+      if (item.to === '/equipamentos') return true;     // força visível a todos os logados
+      if (item.adminOnly) return privileged;
+      return true;
+    });
+  }, [user, loading]);
 
   return (
-    <aside className="w-64 min-h-screen border-r bg-white shadow-sm">
-      <div className="p-6 border-b border-gray-200">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-lg">GC</span>
-          </div>
-          <div>
-            <div className="font-bold text-gray-900">Intranet</div>
-            <div className="text-xs text-gray-500 truncate">{user?.name || 'Visitante'}</div>
-          </div>
-        </div>
-      </div>
-      
-      <nav className="flex flex-col p-4 space-y-1">
-        {NAV.filter(item => {
-          // Painel Admin: APENAS para admins
-          if (item.to === '/admin') {
-            return isAdmin;
-          }
-          // Demais itens: se tiver adminOnly, também restringe
-          if (item.adminOnly) {
-            return isAdmin;
-          }
-          // Visível para todos
-          return true;
-        }).map(item => (
+    <aside className="p-3 w-64 border-r min-h-screen bg-white">
+      <div className="text-lg font-semibold mb-4 px-2">Intranet</div>
+      <nav className="space-y-1">
+        {items.map(({ to, label, icon: Icon }) => (
           <NavLink
-            key={item.to}
-            to={item.to}
+            key={to}
+            to={to}
             className={({ isActive }) =>
-              `flex items-center space-x-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                isActive 
-                  ? 'bg-blue-600 text-white' 
-                  : 'text-gray-700 hover:bg-gray-100'
+              `flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-100 transition ${
+                isActive ? 'bg-gray-100 font-medium' : ''
               }`
             }
           >
-            <item.icon className="w-4 h-4" />
-            <span>{item.label}</span>
+            <Icon className="w-5 h-5" />
+            <span>{label}</span>
           </NavLink>
         ))}
       </nav>
-
-      {/* Botão "Sair" removido */}
     </aside>
   );
 }
-
-const Sidebar = SidebarImpl;
-export { Sidebar };
-export default Sidebar;
