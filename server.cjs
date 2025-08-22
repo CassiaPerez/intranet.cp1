@@ -2,7 +2,7 @@
 // server.cjs - Backend Express + SQLite (Express 5 compatível, sem curingas inválidos)
 
 'use strict';
-
+const crypto = require('crypto');
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
