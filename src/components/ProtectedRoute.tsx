@@ -1,17 +1,22 @@
 import React, { ReactNode } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 interface ProtectedRouteProps {
   children: ReactNode;
-  requireAdmin?: boolean;
+  requireAdmin?: boolean;              // compat com seu código atual
+  allowedRoles?: string[];             // novo: use para rotas específicas (ex.: ['ti','admin'])
 }
+
+const ADMIN_ROLES = ['admin', 'moderador', 'ti', 'rh'];
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
   children,
-  requireAdmin = false
+  requireAdmin = false,
+  allowedRoles
 }) => {
   const { isAuthenticated, loading, user } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -25,25 +30,30 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
+  // Normaliza papel do usuário
+  const role = String(user?.role || user?.setor || user?.sector || '').toLowerCase();
+
+  // Modo legado: requireAdmin
   if (requireAdmin) {
     const isAdmin = !!user && (
-      user.role === 'admin' || 
-      user.role === 'moderador' ||
-      user.email === 'admin@grupocropfield.com.br' ||
-      user.sector === 'TI' || 
-      user.sector === 'RH' ||
-      user.setor === 'TI' ||
-      user.setor === 'RH' ||
-      user.role === 'rh' ||
-      user.role === 'ti'
+      ADMIN_ROLES.includes(role) ||
+      user?.email === 'admin@grupocropfield.com.br'
     );
-    
-    console.log('ProtectedRoute admin check:', isAdmin, user);
-    
+
     if (!isAdmin) {
+      console.warn('[ProtectedRoute] Bloqueado por requireAdmin. user=', user);
+      return <Navigate to="/" replace />;
+    }
+  }
+
+  // Novo modo: allowedRoles
+  if (allowedRoles && allowedRoles.length > 0) {
+    const ok = allowedRoles.map(r => r.toLowerCase()).includes(role);
+    if (!ok) {
+      console.warn('[ProtectedRoute] Bloqueado por allowedRoles:', allowedRoles, 'user.role=', role);
       return <Navigate to="/" replace />;
     }
   }
