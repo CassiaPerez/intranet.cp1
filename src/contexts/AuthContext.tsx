@@ -1,195 +1,158 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+// src/contexts/AuthContext.tsx
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
-const API_BASE = '';
+const API_BASE = import.meta.env.VITE_API_URL || ''; // '' => usa proxy do Vite
 
-interface User {
-  id: string;
-  name: string;
+// Modelo unificado do usuário que o app vai usar
+export type User = {
+  id: number;
+  nome: string;
   email: string;
-  sector: string;
-  setor: string;
-  role: string;
-  avatar?: string;
-  token?: string;
-}
-
-interface AuthContextType {
-  user: User | null;
-  logout: () => void;
-  isAuthenticated: boolean;
-  loading: boolean;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+  setor?: string;
+  role?: string;
+  picture?: string;
 };
 
-interface AuthProviderProps {
-  children: ReactNode;
+type AuthContextType = {
+  user: User | null;
+  isAuthenticated: boolean;
+  loading: boolean;
+  loginWithGoogle: () => void;
+  reload: () => Promise<void>;
+  logout: () => Promise<void>;
+};
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const useAuth = () => {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within an AuthProvider');
+  return ctx;
+};
+
+// Normaliza diferentes formatos vindos do backend/localStorage
+function normalizeUser(raw: any): User | null {
+  if (!raw) return null;
+  const id = raw.id ?? raw.userId ?? raw.uid ?? 0;
+  const email = raw.email ?? '';
+  const nome = raw.nome ?? raw.name ?? raw.displayName ?? '';
+  const setor = raw.setor ?? raw.sector ?? '';
+  const role = raw.role ?? '';
+  const picture = raw.picture ?? raw.avatar ?? raw.photoURL ?? '';
+
+  if (!email) return null;
+
+  return {
+    id: Number(id) || 0,
+    email,
+    nome,
+    setor,
+    role,
+    picture
+  };
 }
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+/** Heurística de fallback caso o backend não envie role/setor (evitar “travar” login) */
+function fillMissingFields(u: User): User {
+  const role = u.role && u.role.trim()
+    ? u.role
+    : (u.email === 'admin@grupocropfield.com.br' || u.setor === 'TI' ? 'admin' : (u.setor === 'RH' ? 'rh' : 'colaborador'));
+  return { ...u, role };
+}
+
+const STORAGE_KEY = 'currentUser';
+
+export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
+  const mounted = useRef(true);
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
+  async function fetchMe(): Promise<User | null> {
+    try {
+      const res = await fetch(`${API_BASE}/api/me`, { credentials: 'include' });
+      if (!res.ok) return null;
 
-  const checkAuth = async () => {
+      // Algumas hospedagens retornam texto — lidamos com ambos
+      const text = await res.text();
+      if (!text) return null;
+
+      let data: any;
+      try { data = JSON.parse(text); } catch { return null; }
+
+      const raw = data.user ?? data; // aceita { ok, user } ou objeto direto
+      let u = normalizeUser(raw);
+      if (!u) return null;
+      u = fillMissingFields(u);
+      return u;
+    } catch {
+      return null;
+    }
+  }
+
+  // Recarrega o estado de autenticação (preferir backend; cair para localStorage se offline)
+  const reload = async () => {
     setLoading(true);
     try {
-      console.log('[AUTH] Starting auth check...');
-      
-      // Check if user is stored in localStorage first
-      const storedUser = localStorage.getItem('currentUser');
-      if (storedUser) {
-        try {
-          const userData = JSON.parse(storedUser);
-          console.log('[AUTH] Found stored user:', userData.email);
-          
-          // Normalize user data structure for compatibility
-          if (userData && userData.email) {
-            // Ensure both sector and setor exist
-            if (userData.sector && !userData.setor) {
-              userData.setor = userData.sector;
-            }
-            if (userData.setor && !userData.sector) {
-              userData.sector = userData.setor;
-            }
-            // Ensure role exists
-            if (!userData.role) {
-              if (userData.email === 'admin@grupocropfield.com.br' || userData.sector === 'TI' || userData.setor === 'TI') {
-                userData.role = 'admin';
-              } else if (userData.sector === 'RH' || userData.setor === 'RH') {
-                userData.role = 'rh';
-              } else {
-                userData.role = 'colaborador';
-              }
-            }
-            console.log('User data normalized:', userData);
-            setUser(userData);
-            setIsAuthenticated(true);
-            setLoading(false);
-            
-            // Verify with backend that session is still valid
-            try {
-              const verifyResponse = await fetch('/api/me', {
-                credentials: 'include'
-              });
-              
-              if (!verifyResponse.ok) {
-                console.log('[AUTH] Session expired, clearing stored user');
-                localStorage.removeItem('currentUser');
-                setUser(null);
-                setIsAuthenticated(false);
-              }
-            } catch (verifyError) {
-              console.log('[AUTH] Cannot verify session with backend, but keeping local auth');
-            }
-            
-            return;
-          }
-        } catch (error) {
-          console.error('Error parsing stored user:', error);
-          localStorage.removeItem('currentUser');
-        }
+      const u = await fetchMe();
+      if (u) {
+        setUser(u);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(u));
+        return;
       }
-
-      // Try API call as fallback
-      try {
-        const response = await fetch('/api/me', {
-          credentials: 'include'
-        });
-        
-        if (response.ok) {
-          const responseText = await response.text();
-          if (responseText) {
-            try {
-              const data = JSON.parse(responseText);
-              // Normalize API user data
-              if (data.user) {
-                if (data.user.sector && !data.user.setor) {
-                  data.user.setor = data.user.sector;
-                }
-                if (data.user.setor && !data.user.sector) {
-                  data.user.sector = data.user.setor;
-                }
-                if (!data.user.role) {
-                  if (data.user.email === 'admin@grupocropfield.com.br' || data.user.sector === 'TI' || data.user.setor === 'TI') {
-                    data.user.role = 'admin';
-                  } else if (data.user.sector === 'RH' || data.user.setor === 'RH') {
-                    data.user.role = 'rh';
-                  } else {
-                    data.user.role = 'colaborador';
-                  }
-                }
-                // Preserve token if returned by API
-                if (data.token) {
-                  data.user.token = data.token;
-                }
-                console.log('API user data normalized:', data.user);
-                setUser(data.user);
-                setIsAuthenticated(true);
-                localStorage.setItem('currentUser', JSON.stringify(data.user));
-                setLoading(false);
-                return;
-              }
-            } catch (parseError) {
-              console.error('Failed to parse auth response:', parseError);
-            }
-          }
+      // Fallback: localStorage (ex.: offline)
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed = normalizeUser(JSON.parse(stored));
+        if (parsed) {
+          setUser(fillMissingFields(parsed));
+          return;
         }
-      } catch (apiError) {
-        console.log('API not available, using local auth');
+        localStorage.removeItem(STORAGE_KEY);
       }
-
-      // If no stored user and API fails, user is not authenticated
       setUser(null);
-      setIsAuthenticated(false);
-    } catch (error) {
-      console.error('Auth check error:', error);
-      setUser(null);
-      setIsAuthenticated(false);
     } finally {
-      setLoading(false);
+      if (mounted.current) setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    mounted.current = true;
+    reload();
+    // Sincroniza logout/login entre abas
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY) reload();
+    };
+    window.addEventListener('storage', onStorage);
+    return () => {
+      mounted.current = false;
+      window.removeEventListener('storage', onStorage);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const loginWithGoogle = () => {
+    // Redireciona para o backend iniciar o OAuth
+    window.location.href = `${API_BASE}/auth/google`;
   };
 
   const logout = async () => {
     try {
-      // Clear localStorage first
-      localStorage.removeItem('currentUser');
-      
-      await fetch('/auth/logout', {
-        method: 'POST',
-        credentials: 'include'
-      });
-    } catch (error) {
-      console.error('Logout error:', error);
+      localStorage.removeItem(STORAGE_KEY);
+      await fetch(`${API_BASE}/auth/logout`, { method: 'POST', credentials: 'include' });
+    } catch (_) {
+      // mesmo que falhe, vamos limpar o estado local
     } finally {
       setUser(null);
-      setIsAuthenticated(false);
     }
   };
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        logout,
-        isAuthenticated,
-        loading,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
+  const value = useMemo<AuthContextType>(() => ({
+    user,
+    isAuthenticated: !!user,
+    loading,
+    loginWithGoogle,
+    reload,
+    logout
+  }), [user, loading]);
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
