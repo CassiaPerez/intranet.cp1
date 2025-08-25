@@ -68,21 +68,22 @@ db.serialize(() => {
   db.run('PRAGMA journal_mode = WAL');
   db.run('PRAGMA busy_timeout = 5000');
 
-  // Tabela de usuários
-  db.run(`CREATE TABLE IF NOT EXISTS usuarios (
-    id TEXT PRIMARY KEY,
-    nome TEXT NOT NULL,
-    email TEXT UNIQUE NOT NULL,
-    senha TEXT NOT NULL,
-    setor TEXT DEFAULT 'Geral',
-    role TEXT DEFAULT 'colaborador',
-    ativo INTEGER DEFAULT 1,
-    pontos_gamificacao INTEGER DEFAULT 0,
-    can_publish_mural INTEGER DEFAULT 0,
-    can_moderate_mural INTEGER DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`);
+// Tabela de usuários
+db.run(`CREATE TABLE IF NOT EXISTS usuarios (
+  id TEXT PRIMARY KEY,
+  nome TEXT NOT NULL,
+  email TEXT UNIQUE NOT NULL,
+  senha TEXT NOT NULL,
+  setor TEXT DEFAULT 'Geral',
+  role TEXT DEFAULT 'colaborador',
+  ativo INTEGER DEFAULT 1,
+  pontos_gamificacao INTEGER DEFAULT 0,
+  can_publish_mural INTEGER DEFAULT 0,
+  can_moderate_mural INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)`);
+
 
   // Seeds padrão
   const seed = (id, nome, email, senha, setor, role) => {
