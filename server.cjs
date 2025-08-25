@@ -19,7 +19,7 @@ const fs = require('fs');
 
 const app = express();
 const HOST = process.env.HOST || '0.0.0.0';
-const PORT = Number(process.env.PORT) || 3005; // ajuste aqui e no Google Cloud se usar outra porta
+const PORT = Number(process.env.PORT) || 3006; // ajuste aqui e no Google Cloud se usar outra porta
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const WEB_URL = process.env.WEB_URL || 'http://localhost:5173';
 const JWT_SECRET = process.env.JWT_SECRET || 'cropfield-secret-key-2025';
