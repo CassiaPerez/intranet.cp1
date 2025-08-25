@@ -27,7 +27,7 @@ const NAV: NavItem[] = [
   { to: '/aniversariantes', label: 'Aniversariantes', icon: Cake },
   { to: '/troca-proteina', label: 'Troca de Proteínas', icon: RefreshCw },
   { to: '/diretorio', label: 'Contatos', icon: Users },
-  { to: '/equipamentos', label: 'Equipamentos', icon: Monitor, adminOnly: true },
+  { to: '/equipamentos', label: 'Equipamentos', icon: Monitor },
   { to: '/mural', label: 'Mural', icon: MessageSquare },
   { to: '/admin', label: 'Painel Admin', icon: Settings, adminOnly: true },
 ];
