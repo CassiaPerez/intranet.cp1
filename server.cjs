@@ -5,7 +5,7 @@
 // - JWT + CORS + PRAGMAs SQLite (WAL, busy_timeout, foreign_keys)
 // - Módulos: Mural, Equipamentos TI, Reservas, Portaria, Painel Admin
 
-'use strict';
+$1require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
