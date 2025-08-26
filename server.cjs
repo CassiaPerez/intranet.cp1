@@ -2,7 +2,6 @@
 // server.cjs - Backend Express + SQLite (Express 5 compatível)
 
 'use strict';
-require('dotenv').config();
 
 const crypto = require('crypto');
 const express = require('express');
@@ -19,9 +18,8 @@ const fs = require('fs');
 
 const app = express();
 const HOST = process.env.HOST || '0.0.0.0';
-const PORT = Number(process.env.PORT) || 3006; // ajuste aqui e no Google Cloud se usar outra porta
+const PORT = Number(process.env.PORT) || 3006;
 const NODE_ENV = process.env.NODE_ENV || 'development';
-const WEB_URL = process.env.WEB_URL || 'http://localhost:5173';
 const JWT_SECRET = process.env.JWT_SECRET || 'cropfield-secret-key-2025';
 
 // --- Google OAuth (opcional) ---
@@ -29,18 +27,16 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
 const GOOGLE_CALLBACK_URL =
   process.env.GOOGLE_CALLBACK_URL || `http://localhost:${PORT}/auth/google/callback`;
-const GOOGLE_AUTOPROVISION = String(process.env.GOOGLE_AUTOPROVISION || '0') === '1';
 
 console.log('🔐 Google OAuth Config:', {
   clientId: GOOGLE_CLIENT_ID ? 'Configurado' : 'Não configurado',
   clientSecret: GOOGLE_CLIENT_SECRET ? 'Configurado' : 'Não configurado',
-  callbackUrl: GOOGLE_CALLBACK_URL,
-  autoProvision: GOOGLE_AUTOPROVISION
+  callbackUrl: GOOGLE_CALLBACK_URL
 });
 
 // --- Robustez do processo ---
 process.on('uncaughtException', (err) => {
-  console.error('[uncaughtException]', (err && err.stack) || err);
+  console.error('[uncaughtException]', err && err.stack || err);
 });
 process.on('unhandledRejection', (reason) => {
   console.error('[unhandledRejection]', reason);
@@ -111,7 +107,7 @@ db.serialize(() => {
     FOREIGN KEY (usuario_id) REFERENCES usuarios (id)
   )`);
 
-  // Reservas
+  // Reservas (usa 'inicio'/'fim' para evitar palavras reservadas)
   db.run(`CREATE TABLE IF NOT EXISTS reservas (
     id TEXT PRIMARY KEY,
     usuario_id TEXT NOT NULL,
@@ -206,8 +202,7 @@ db.serialize(() => {
 // --- Middlewares globais ---
 const allowedOrigins = [
   'http://localhost:5173',
-  'http://127.0.0.1:5173',
-  WEB_URL // permite o que vier do .env
+  'http://127.0.0.1:5173'
 ];
 const originRegexes = [
   /^https?:\/\/[^/]*\.stackblitz\.io$/i,
@@ -223,9 +218,7 @@ app.use(cors({
     }
     console.warn('[CORS] Bloqueado:', origin);
     return cb(null, false);
-  },
-  methods: ['GET','POST','PUT','DELETE','OPTIONS'],
-  allowedHeaders: ['Content-Type','Authorization']
+  }
 }));
 
 app.use(express.json({ limit: '1mb' }));
@@ -241,15 +234,6 @@ app.use((req, _res, next) => {
   next();
 });
 
-// --- Config p/ frontend decidir exibir botão Google ---
-app.get('/api/config', (_req, res) => {
-  res.json({
-    googleEnabled: !!(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET),
-    callbackUrl: GOOGLE_CALLBACK_URL,
-    webUrl: WEB_URL
-  });
-});
-
 // --- Google OAuth (opcional) ---
 if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
   passport.use(new GoogleStrategy({
@@ -258,38 +242,17 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
     callbackURL: GOOGLE_CALLBACK_URL
   }, async (_accessToken, _refreshToken, profile, done) => {
     try {
-      const email = profile.emails?.[0]?.value?.toLowerCase();
-      const name = profile.displayName || '';
+      const email = profile.emails?.[0]?.value;
+      const name = profile.displayName;
       if (!email) return done(new Error('Email não fornecido pelo Google'), null);
 
-      db.get('SELECT * FROM usuarios WHERE email = ? AND ativo = 1', [email], (err, user) => {
+      db.get('SELECT * FROM usuarios WHERE email = ? AND ativo = 1', [email.toLowerCase()], (err, user) => {
         if (err) return done(err, null);
-        if (user) {
-          db.run('UPDATE usuarios SET updated_at = CURRENT_TIMESTAMP WHERE id = ?', [user.id], (e) => {
-            if (e) console.warn('⚠️ Erro ao atualizar usuário:', e.message);
-          });
-          return done(null, user);
-        }
-
-        // Autoprovisionamento opcional
-        if (GOOGLE_AUTOPROVISION) {
-          const id = `user-${(crypto.randomUUID?.() || Date.now())}`;
-          const dummyPass = bcrypt.hashSync(crypto.randomBytes(16).toString('hex'), 10);
-          db.run(
-            `INSERT INTO usuarios (id, nome, email, senha, setor, role, can_publish_mural, can_moderate_mural)
-             VALUES (?, ?, ?, ?, 'Geral', 'colaborador', 0, 0)`,
-            [id, name, email, dummyPass],
-            (e2) => {
-              if (e2) return done(e2, null);
-              db.get('SELECT * FROM usuarios WHERE id = ?', [id], (e3, novo) => {
-                if (e3) return done(e3, null);
-                return done(null, novo);
-              });
-            }
-          );
-        } else {
-          return done(new Error('Usuário não autorizado. Contate o administrador.'), null);
-        }
+        if (!user) return done(new Error('Usuário não autorizado. Contate o administrador.'), null);
+        db.run('UPDATE usuarios SET updated_at = CURRENT_TIMESTAMP WHERE id = ?', [user.id], (e) => {
+          if (e) console.warn('⚠️ Erro ao atualizar usuário:', e.message);
+        });
+        return done(null, user);
       });
     } catch (error) {
       return done(error, null);
@@ -314,10 +277,10 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
   app.get('/api/auth/google', googleAuth);
 
   app.get('/auth/google/callback',
-    passport.authenticate('google', { session: false, failureRedirect: `${WEB_URL}/login?error=google_auth_failed` }),
+    passport.authenticate('google', { session: false, failureRedirect: '/login?error=google_auth_failed' }),
     (req, res) => {
       const user = req.user;
-      if (!user) return res.redirect(`${WEB_URL}/login?error=authentication_failed`);
+      if (!user) return res.redirect('/login?error=authentication_failed');
 
       const token = jwt.sign(
         {
@@ -341,13 +304,13 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
         maxAge: 24 * 60 * 60 * 1000
       });
 
-      res.redirect(`${WEB_URL}/?login=success`);
+      res.redirect('/?login=success');
     }
   );
 } else {
   console.log('⚠️ Google OAuth não configurado - defina GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET');
-  app.get('/auth/google', (_req, res) => res.redirect(`${WEB_URL}/login?error=google_not_configured`));
-  app.get('/api/auth/google', (_req, res) => res.redirect(`${WEB_URL}/login?error=google_not_configured`));
+  app.get('/auth/google', (_req, res) => res.redirect('/login?error=google_not_configured'));
+  app.get('/api/auth/google', (_req, res) => res.redirect('/login?error=google_not_configured'));
 }
 
 // --- Helpers de auth/perm ---
@@ -903,7 +866,6 @@ const server = app.listen(PORT, HOST, () => {
   console.log(`🚀 Backend server running on http://${HOST}:${PORT}`);
   console.log(`📁 Database: ${dbPath}`);
   console.log(`🌍 Environment: ${NODE_ENV}`);
-  console.log(`🌐 WEB_URL: ${WEB_URL}`);
   console.log('✅ Server ready to accept connections');
 });
 
