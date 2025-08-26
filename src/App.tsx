@@ -6,7 +6,7 @@ import { GamificationProvider } from './contexts/GamificationContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 import { LoginPage } from './pages/LoginPage';
-import GoogleOAuth from './pages/GoogleOAuth'; // ⬅️ novo
+import GoogleOAuth from './pages/GoogleOAuth';
 import { Dashboard } from './pages/Dashboard';
 import { ReservaSalas } from './pages/ReservaSalas';
 import { Cardapio } from './pages/Cardapio';
@@ -28,7 +28,7 @@ function App() {
           <Routes>
             {/* Público */}
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/login-google" element={<GoogleOAuth />} /> {/* ⬅️ NOVA ROTA */}
+            <Route path="/login-google" element={<GoogleOAuth />} />
 
             {/* Protegido */}
             <Route
@@ -82,7 +82,7 @@ function App() {
             <Route
               path="/admin/*"
               element={
-                <ProtectedRoute requiredRole="admin">
+                <ProtectedRoute requiredRoles={['admin-ti','admin-rh']}>
                   <AdminPanel />
                 </ProtectedRoute>
               }
@@ -104,8 +104,8 @@ function App() {
               }
             />
 
-            {/* Fallback */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            {/* Fallback → login (evita loop) */}
+            <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </Router>
       </GamificationProvider>
