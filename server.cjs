@@ -53,7 +53,7 @@ const COOKIE_SECURE = IS_PROD || WEB_URL.startsWith('https://');
 // Middlewares
 // =======================
 app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 app.use(morgan('dev'));
 app.use(express.json({ limit: '1mb' }));
