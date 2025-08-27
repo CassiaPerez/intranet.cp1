@@ -3,65 +3,58 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  // Altere conforme o ambiente:
-  // - Dev local: http://127.0.0.1:3005
-  // - StackBlitz/Remoto: https://intranet.grupocropfield.com.br
-  const target = env.VITE_API_URL || 'http://127.0.0.1:3005'
+
+  // 🔧 Padronize em localhost para evitar mismatch de cookies
+  const target = env.VITE_API_URL || 'http://localhost:3006'
+
+  const commonProxyOpts = {
+    target,
+    changeOrigin: true,
+    secure: false,
+    timeout: 30000,
+    onError: (err: any) => {
+      console.error('[VITE-PROXY] Error:', err?.code || err?.message)
+    },
+    onProxyReq: (proxyReq: any, req: any) => {
+      // Opcional — em geral nem precisa, mas não atrapalha:
+      if (req.headers.cookie) proxyReq.setHeader('cookie', req.headers.cookie)
+    }
+  }
 
   return {
     plugins: [react()],
     server: {
-      port: 0,
-      strictPort: false,
-      host: true, // acessível pela rede/StackBlitz
-      watch: {
-        ignored: ['**/data/**'], // Ignore database files to prevent EIO errors
-      },
-      hmr: {
-        overlay: false, // Disable error overlay that can cause crashes
-      },
+      port: 5173,
+      strictPort: true,
+      host: true, // 0.0.0.0
+      watch: { ignored: ['**/data/**'] },
+      hmr: { overlay: false },
       proxy: {
-        '/api': {
-          target,
-          changeOrigin: true,
-          secure: false,
-          timeout: 30000,
-          onError: (err, req, res) => {
-            console.error('[VITE-PROXY] Proxy error:', err.message);
-          },
-          onProxyReq: (proxyReq, req, res) => {
-            console.log('[VITE-PROXY] Request:', req.method, req.url);
-           // Forward authentication cookies
-           if (req.headers.cookie) {
-             proxyReq.setHeader('cookie', req.headers.cookie);
-           }
-          }
-          // Se seu backend NÃO usa prefixo /api, descomente:
-          // rewrite: p => p.replace(/^\/api/, ''),
+        // REST
+        '/api': { ...commonProxyOpts },
+
+        // Autenticação (Google + logout)
+        '/auth': { ...commonProxyOpts },
+
+        // ✅ Login admin: backend expõe /login-admin (sem rewrite)
+        '/login-admin': { ...commonProxyOpts },
+
+        // ✅ Alias opcional: /logout → /auth/logout (ok manter)
+        '/logout': {
+          ...commonProxyOpts,
+          rewrite: (p: string) => p.replace(/^\/logout$/, '/auth/logout'),
         },
-        '/auth': {
-          target,
-          changeOrigin: true,
-          secure: false,
-          timeout: 30000,
-          onProxyReq: (proxyReq, req, res) => {
-            // Forward authentication cookies for auth routes
-            if (req.headers.cookie) {
-              proxyReq.setHeader('cookie', req.headers.cookie);
-            }
-          },
-        },
+
+        // ✅ Health: backend já usa /healthz (sem rewrite)
+        '/healthz': { ...commonProxyOpts },
       },
     },
     build: {
       sourcemap: true,
       rollupOptions: {
         onwarn: (warning, defaultHandler) => {
-          // Suppress certain warnings that can cause build issues
-          if (warning.code === 'SOURCEMAP_ERROR') {
-            return;
-          }
-          defaultHandler(warning);
+          if (warning.code === 'SOURCEMAP_ERROR') return
+          defaultHandler(warning)
         }
       }
     }
