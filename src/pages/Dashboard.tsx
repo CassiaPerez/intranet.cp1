@@ -18,10 +18,21 @@ import toast from 'react-hot-toast';
 
 const API_BASE = '';
 
+// helper simples: pega o primeiro token do nome
+const getPrimeiroNome = (nome?: string) => {
+  if (!nome) return '';
+  return nome.trim().split(/\s+/)[0] || '';
+};
+
 export const Dashboard: React.FC = () => {
   const { user } = useAuth();
-  const [pontos, setPontos] = useState({ totalPontos: 0, breakdown: [] });
-  const [ranking, setRanking] = useState([]);
+
+  // 👇 normaliza o nome vindo do backend (prioriza .nome; fallback .name)
+  const nomeCheio = (user?.nome ?? user?.name ?? '').trim();
+  const primeiroNome = getPrimeiroNome(nomeCheio) || 'Usuário';
+
+  const [pontos, setPontos] = useState<{ totalPontos: number; breakdown: any[] }>({ totalPontos: 0, breakdown: [] });
+  const [ranking, setRanking] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -30,17 +41,10 @@ export const Dashboard: React.FC = () => {
 
   const loadDashboardData = async () => {
     try {
-      // Try to load real data from backend
       try {
-        const response = await fetch('/api/admin/dashboard', {
-          credentials: 'include'
-        });
-        
+        const response = await fetch('/api/admin/dashboard', { credentials: 'include' });
         if (response.ok) {
           const data = await response.json();
-          console.log('[DASHBOARD] Loaded data from API:', data);
-          
-          // Use real data if available
           setPontos({
             totalPontos: data.userPoints || 0,
             breakdown: data.breakdown || []
@@ -49,9 +53,8 @@ export const Dashboard: React.FC = () => {
         } else {
           throw new Error('API not available');
         }
-      } catch (apiError) {
-        console.log('[DASHBOARD] API not available, using mock data');
-        // Fallback to mock data
+      } catch {
+        // fallback mock
         setPontos({
           totalPontos: 150,
           breakdown: [
@@ -64,7 +67,6 @@ export const Dashboard: React.FC = () => {
       }
     } catch (error) {
       console.error('Erro ao carregar dados do dashboard:', error);
-      // Use fallback data instead of showing error
       setPontos({ totalPontos: 0, breakdown: [] });
       setRanking([]);
     } finally {
@@ -72,23 +74,23 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  const getActionLabel = (acao) => {
-    const labels = {
-      'MURAL_LIKE': 'Curtidas no Mural',
-      'MURAL_COMMENT': 'Comentários no Mural',
-      'RESERVA_CREATE': 'Reservas Criadas',
-      'PORTARIA_CREATE': 'Agendamentos da Portaria',
-      'TROCA_PROTEINA': 'Trocas de Proteína'
+  const getActionLabel = (acao: string) => {
+    const labels: Record<string, string> = {
+      MURAL_LIKE: 'Curtidas no Mural',
+      MURAL_COMMENT: 'Comentários no Mural',
+      RESERVA_CREATE: 'Reservas Criadas',
+      PORTARIA_CREATE: 'Agendamentos da Portaria',
+      TROCA_PROTEINA: 'Trocas de Proteína'
     };
     return labels[acao] || acao;
   };
 
   const getUserRank = () => {
-    const userIndex = ranking.findIndex(r => r.nome === user?.nome);
+    const userIndex = ranking.findIndex(r => r.nome === (user?.nome ?? user?.name));
     return userIndex >= 0 ? userIndex + 1 : '-';
   };
 
-  const getUserLevel = (totalPontos) => {
+  const getUserLevel = (totalPontos: number) => {
     if (totalPontos < 50) return 1;
     if (totalPontos < 150) return 2;
     if (totalPontos < 300) return 3;
@@ -117,7 +119,7 @@ export const Dashboard: React.FC = () => {
     },
     { 
       title: 'Ações Realizadas', 
-      value: pontos.breakdown.reduce((sum, b) => sum + b.count, 0).toString(), 
+      value: pontos.breakdown.reduce((sum, b) => sum + (b.count || 0), 0).toString(), 
       icon: MessageSquare, 
       color: 'bg-green-500' 
     },
@@ -141,7 +143,7 @@ export const Dashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold mb-2">
-                Olá, {user?.name?.split(' ')[0] || 'Usuário'}! 👋
+                Olá, {primeiroNome}! 👋
               </h1>
               <p className="text-blue-100 mb-4">
                 Bem-vindo de volta à Intranet do Grupo Cropfield
@@ -244,7 +246,7 @@ export const Dashboard: React.FC = () => {
                   <div className="flex-1">
                     <div className="flex items-center space-x-2">
                       <p className="font-medium text-gray-900">{topUser.nome}</p>
-                      {topUser.nome === user?.nome && (
+                      {(topUser.nome === (user?.nome ?? user?.name)) && (
                         <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">Você</span>
                       )}
                     </div>
