@@ -3,6 +3,9 @@
 
 'use strict';
 
+// Carrega .env se a lib existir (não quebra caso não esteja instalada)
+try { require('dotenv').config(); } catch {}
+
 const crypto = require('crypto');
 const express = require('express');
 const cors = require('cors');
@@ -16,10 +19,16 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const path = require('path');
 const fs = require('fs');
 
+// GIS opcional (para botão oficial / One Tap)
+let OAuth2Client = null;
+try { ({ OAuth2Client } = require('google-auth-library')); } catch {}
+
 const app = express();
-const HOST = process.env.HOST || '0.0.0.0';
+// Corrige HOST caso venha como "https:0.0.0.0" no .env
+const HOST = (process.env.HOST || '0.0.0.0').replace(/^https?:/, '');
 const PORT = Number(process.env.PORT) || 3006;
 const NODE_ENV = process.env.NODE_ENV || 'development';
+const WEB_URL = process.env.WEB_URL || 'http://localhost:5173';
 const JWT_SECRET = process.env.JWT_SECRET || 'cropfield-secret-key-2025';
 
 // --- Google OAuth (opcional) ---
@@ -36,7 +45,7 @@ console.log('🔐 Google OAuth Config:', {
 
 // --- Robustez do processo ---
 process.on('uncaughtException', (err) => {
-  console.error('[uncaughtException]', err && err.stack || err);
+  console.error('[uncaughtException]', (err && err.stack) || err);
 });
 process.on('unhandledRejection', (reason) => {
   console.error('[unhandledRejection]', reason);
@@ -200,10 +209,16 @@ db.serialize(() => {
 });
 
 // --- Middlewares globais ---
+const allowedFromEnv = (process.env.WEB_URL || 'http://localhost:5173')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
 const allowedOrigins = [
-  'http://localhost:5173',
+  ...allowedFromEnv,
   'http://127.0.0.1:5173'
 ];
+
 const originRegexes = [
   /^https?:\/\/[^/]*\.stackblitz\.io$/i,
   /^https?:\/\/[^/]*\.netlify\.app$/i
@@ -277,10 +292,13 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
   app.get('/api/auth/google', googleAuth);
 
   app.get('/auth/google/callback',
-    passport.authenticate('google', { session: false, failureRedirect: '/login?error=google_auth_failed' }),
+    passport.authenticate('google', {
+      session: false,
+      failureRedirect: WEB_URL + '/login?error=google_auth_failed'
+    }),
     (req, res) => {
       const user = req.user;
-      if (!user) return res.redirect('/login?error=authentication_failed');
+      if (!user) return res.redirect(WEB_URL + '/login?error=authentication_failed');
 
       const token = jwt.sign(
         {
@@ -304,13 +322,88 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
         maxAge: 24 * 60 * 60 * 1000
       });
 
-      res.redirect('/?login=success');
+      // opcional: enviar dados via base64 no hash (mantém compat com sua UI)
+      const payload = Buffer.from(JSON.stringify({
+        id: user.id, name: user.nome, email: user.email, role: user.role
+      })).toString('base64url');
+
+      // Redireciona para o FRONT (não para :3006)
+      res.redirect(`${WEB_URL}/login-google#${payload}`);
+      // Se não usa /login-google no front, troque por:
+      // res.redirect(WEB_URL + '/?login=success');
     }
   );
 } else {
   console.log('⚠️ Google OAuth não configurado - defina GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET');
   app.get('/auth/google', (_req, res) => res.redirect('/login?error=google_not_configured'));
   app.get('/api/auth/google', (_req, res) => res.redirect('/login?error=google_not_configured'));
+}
+
+// --- GIS opcional: verificar ID token direto (sem redirect)
+if (OAuth2Client && GOOGLE_CLIENT_ID) {
+  const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
+
+  app.post('/auth/google/verify-id-token', (req, res) => {
+    (async () => {
+      try {
+        const { credential } = req.body || {};
+        if (!credential) return res.status(400).json({ error: 'credential ausente' });
+
+        const ticket = await googleClient.verifyIdToken({
+          idToken: credential,
+          audience: GOOGLE_CLIENT_ID
+        });
+        const payload = ticket.getPayload();
+        if (!payload) return res.status(401).json({ error: 'token inválido' });
+
+        const email = payload.email;
+        const name = payload.name || 'Usuário';
+        const sub = payload.sub;
+        const picture = payload.picture || null;
+        if (!email || !sub) return res.status(401).json({ error: 'payload incompleto' });
+
+        // Mantém política atual: só permite login se já existir e estiver ativo
+        db.get('SELECT * FROM usuarios WHERE email = ? AND ativo = 1', [email.toLowerCase()], (err, user) => {
+          if (err) return res.status(500).json({ error: 'Erro interno' });
+          if (!user) return res.status(403).json({ error: 'Usuário não autorizado. Contate o administrador.' });
+
+          // Atualiza nome/foto opcionalmente
+          db.run('UPDATE usuarios SET nome = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [name, user.id], (e) => {
+            if (e) console.warn('⚠️ Erro ao atualizar nome do usuário:', e.message);
+          });
+
+          const token = jwt.sign(
+            {
+              id: user.id,
+              email: user.email,
+              role: user.role,
+              name: user.nome,
+              setor: user.setor,
+              sector: user.setor,
+              can_publish_mural: user.can_publish_mural || 0,
+              can_moderate_mural: user.can_moderate_mural || 0
+            },
+            JWT_SECRET,
+            { expiresIn: '24h' }
+          );
+
+          res.cookie('token', token, {
+            httpOnly: true,
+            secure: NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 24 * 60 * 60 * 1000
+          });
+
+          res.json({ ok: true, user: {
+            id: user.id, name: user.nome, email: user.email, role: user.role
+          }});
+        });
+      } catch (err) {
+        console.error('[GIS] verify-id-token error:', err?.message || err);
+        res.status(401).json({ error: 'falha na verificação do ID token' });
+      }
+    })();
+  });
 }
 
 // --- Helpers de auth/perm ---
@@ -866,6 +959,7 @@ const server = app.listen(PORT, HOST, () => {
   console.log(`🚀 Backend server running on http://${HOST}:${PORT}`);
   console.log(`📁 Database: ${dbPath}`);
   console.log(`🌍 Environment: ${NODE_ENV}`);
+  console.log(`✅ Frontend (WEB_URL): ${WEB_URL}`);
   console.log('✅ Server ready to accept connections');
 });
 
