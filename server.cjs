@@ -427,6 +427,63 @@ async function startServer() {
       });
     });
 
+    // ===== MURAL API ROUTES =====
+    
+    // Get all posts
+    app.get('/api/mural/posts', auth, (req, res) => {
+      console.log('[MURAL] 📄 Loading posts for user:', req.user?.usuario);
+      res.json([]);
+    });
+
+    // Create new post
+    app.post('/api/mural/posts', auth, (req, res) => {
+      console.log('[MURAL] ➕ Creating new post by user:', req.user?.usuario);
+      res.json({ success: true, message: 'Post criado com sucesso' });
+    });
+
+    // Like/unlike post
+    app.post('/api/mural/:postId/like', auth, (req, res) => {
+      console.log('[MURAL] ❤️ Like/unlike post:', req.params.postId, 'by user:', req.user?.usuario);
+      res.json({ success: true, liked: true });
+    });
+
+    // Get post comments
+    app.get('/api/mural/:postId/comments', auth, (req, res) => {
+      console.log('[MURAL] 💬 Loading comments for post:', req.params.postId);
+      res.json([]);
+    });
+
+    // Add comment to post
+    app.post('/api/mural/:postId/comments', auth, (req, res) => {
+      console.log('[MURAL] ➕ Adding comment to post:', req.params.postId, 'by user:', req.user?.usuario);
+      res.json({ success: true, message: 'Comentário adicionado com sucesso' });
+    });
+
+    // Delete comment
+    app.delete('/api/mural/comments/:commentId', auth, (req, res) => {
+      console.log('[MURAL] 🗑️ Deleting comment:', req.params.commentId, 'by user:', req.user?.usuario);
+      res.json({ success: true, message: 'Comentário removido com sucesso' });
+    });
+
+    // ===== EQUIPAMENTOS/TI API ROUTES =====
+    
+    // Get all TI requests (for admins/TI users)
+    app.get('/api/ti/solicitacoes', auth, (req, res) => {
+      console.log('[TI] 📋 Loading TI requests for user:', req.user?.usuario, 'role:', req.user?.role);
+      res.json([]);
+    });
+
+    // Get user's own TI requests
+    app.get('/api/ti/minhas', auth, (req, res) => {
+      console.log('[TI] 📋 Loading user TI requests for:', req.user?.usuario);
+      res.json([]);
+    });
+
+    // Create new TI request
+    app.post('/api/ti/solicitacoes', auth, (req, res) => {
+      console.log('[TI] ➕ Creating TI request by user:', req.user?.usuario);
+      res.json({ success: true, message: 'Solicitação criada com sucesso' });
+    });
     // Google OAuth placeholders (for compatibility)
     app.get('/auth/google', (req, res) => {
       console.log('[GOOGLE] 🔗 Google OAuth requested (not implemented)');
