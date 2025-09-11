@@ -11,12 +11,21 @@
     "dev:full": "concurrently \"npm run server\" \"npm run dev:frontend\"",
     "dev:backend": "NODE_ENV=development node server.cjs",
     "dev:separate": "echo 'Run: npm run dev (terminal 1) && npm run dev:backend (terminal 2)'",
-    "build": "vite build",
+    "build": "tsc && vite build",
+    "build:production": "NODE_ENV=production npm run build",
     "lint": "eslint .",
     "preview": "vite preview",
     "server": "NODE_ENV=development node server.cjs",
+    "start": "NODE_ENV=production node server.cjs",
+    "pm2:start": "pm2 start ecosystem.config.js --env production",
+    "pm2:stop": "pm2 stop intranet-backend",
+    "pm2:restart": "pm2 restart intranet-backend",
+    "pm2:logs": "pm2 logs intranet-backend",
     "clean-demo": "node scripts/clean-demo.cjs",
-    "setup-oauth": "node scripts/setup-oauth.js"
+    "setup-oauth": "node scripts/setup-oauth.js",
+    "deploy:backend": "rsync -avz --exclude node_modules --exclude data --exclude .git . ubuntu@your-server:/var/www/intranet/",
+    "deploy:frontend": "npm run build:production && rsync -avz dist/ ubuntu@your-server:/var/www/intranet-frontend/",
+    "deploy:full": "npm run deploy:backend && npm run deploy:frontend"
   },
   "dependencies": {
     "@fullcalendar/core": "^6.1.18",

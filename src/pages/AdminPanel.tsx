@@ -823,7 +823,7 @@ const handleExportTrocas = async (formato: 'csv' | 'excel') => {
   try {
     console.log(`[ADMIN] Exporting protein exchanges as ${formato}...`);
     
-    const response = await fetch(`/api/admin/export/trocas-proteina.${formato}`, {
+    const response = await fetch(`/api/admin/export/protein-exchanges.${formato}`, {
       credentials: 'include'
     });
 
@@ -858,7 +858,7 @@ const handleExportEquipamentos = async (formato: 'csv' | 'excel') => {
   try {
     console.log(`[ADMIN] Exporting equipment requests as ${formato}...`);
     
-    const response = await fetch(`/api/admin/export/equipamentos.${formato}`, {
+    const response = await fetch(`/api/admin/export/equipment.${formato}`, {
       credentials: 'include'
     });
 
@@ -869,7 +869,6 @@ const handleExportEquipamentos = async (formato: 'csv' | 'excel') => {
         const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = `solicitacoes-equipamentos-${new Date().toISOString().slice(0, 10)}.csv`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -893,7 +892,7 @@ const handleExportReservas = async (formato: 'csv' | 'excel') => {
   try {
     console.log(`[ADMIN] Exporting room reservations as ${formato}...`);
     
-    const response = await fetch(`/api/admin/export/reservas.${formato}`, {
+    const response = await fetch(`/api/admin/export/reservations.${formato}`, {
       credentials: 'include'
     });
 
@@ -904,7 +903,6 @@ const handleExportReservas = async (formato: 'csv' | 'excel') => {
         const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = `reservas-salas-${new Date().toISOString().slice(0, 10)}.csv`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -928,7 +926,7 @@ const handleExportBackup = async (formato: 'json' | 'sql') => {
   try {
     console.log(`[ADMIN] Creating backup as ${formato}...`);
     
-    const response = await fetch(`/api/admin/export/backup.${formato}`, {
+    const response = await fetch(`/api/admin/export/full-backup.${formato}`, {
       credentials: 'include'
     });
 
@@ -1018,7 +1016,7 @@ const handleUpdateUser = async (userId: string, updates: Partial<any>) => {
 const handleExport = async (formato: 'csv' | 'excel' | 'pdf') => {
   try {
     const currentMonth = new Date().toISOString().slice(0, 7);
-    const response = await fetch(`/api/admin/export/ranking.${formato}?month=${currentMonth}`, {
+    const response = await fetch(`/api/admin/export/users.${formato}?month=${currentMonth}`, {
       credentials: 'include'
     });
 
@@ -1028,7 +1026,7 @@ const handleExport = async (formato: 'csv' | 'excel' | 'pdf') => {
         const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = `ranking-${currentMonth}.csv`;
+        link.download = `usuarios-${currentMonth}.csv`;
         link.click();
       } else {
         const data = await response.json();

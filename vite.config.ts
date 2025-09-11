@@ -4,11 +4,12 @@ import react from '@vitejs/plugin-react'
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
 
-  // API target configuration
-  const target = env.VITE_API_URL || 'http://localhost:3006'
+  // API target configuration - production vs development
+  const target = mode === 'production' 
+    ? 'https://intranet.cropfield.com.br'
+    : (env.VITE_API_URL || 'http://localhost:3006')
   
   console.log(`[VITE] Proxy target: ${target}`)
-  console.log(`[VITE] Mode: ${mode}`)
 
   const commonProxyOpts = {
     target,
@@ -84,6 +85,16 @@ export default defineConfig(({ mode }) => {
     build: {
       sourcemap: true,
       outDir: 'dist',
+      assetsDir: 'assets',
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            vendor: ['react', 'react-dom'],
+            calendar: ['@fullcalendar/react', '@fullcalendar/daygrid', '@fullcalendar/timegrid'],
+            utils: ['date-fns', 'lucide-react']
+          }
+        }
+      },
       rollupOptions: {
         onwarn: (warning, defaultHandler) => {
           if (warning.code === 'SOURCEMAP_ERROR') return

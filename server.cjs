@@ -26,6 +26,10 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 const WEB_URL = process.env.WEB_URL || `http://localhost:5173`;
 const JWT_SECRET = process.env.JWT_SECRET || 'cropfield-secret-key-2025';
 
+// Production domains
+const PRODUCTION_API_DOMAIN = 'https://intranet.cropfield.com.br';
+const PRODUCTION_WEB_DOMAIN = 'https://intranet.grupocropfield.com.br';
+
 // --- Google OAuth ---
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
@@ -43,8 +47,12 @@ process.on('unhandledRejection', (reason) => console.error('[unhandledRejection]
 
 // FS / DB
 const dataDir = path.join(__dirname, 'data');
-if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+  console.log('📁 Created data directory:', dataDir);
+}
 const dbPath = path.join(dataDir, 'database.sqlite');
+console.log('🗄️  Database path:', dbPath);
 const db = new sqlite3.Database(dbPath);
 
 // ======================
@@ -193,16 +201,22 @@ db.serialize(() => {
 // Middlewares globais
 // ======================
 const allowedOrigins = [
+  // Development
   'http://localhost:5173',
   'http://127.0.0.1:5173',
   'http://localhost:3000',
+  // Production
+  PRODUCTION_WEB_DOMAIN,
+  PRODUCTION_API_DOMAIN,
   WEB_URL
 ].filter(Boolean);
 
 const originRegexes = [
   /^https?:\/\/[^/]*\.stackblitz\.io$/i, 
   /^https?:\/\/[^/]*\.netlify\.app$/i,
-  /^https?:\/\/[^/]*\.bolt\.new$/i
+  /^https?:\/\/[^/]*\.bolt\.new$/i,
+  /^https:\/\/intranet\.grupocropfield\.com\.br$/i,
+  /^https:\/\/intranet\.cropfield\.com\.br$/i
 ];
 app.use(cors({
   credentials: true,
@@ -381,15 +395,16 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
       console.log('[GOOGLE] Setting cookie and redirecting');
       res.cookie('token', token, {
         httpOnly: true,
-        secure: false, // Set to true in production with HTTPS
+        secure: NODE_ENV === 'production', // HTTPS in production
         sameSite: 'lax',
         maxAge: 24 * 60 * 60 * 1000,
         path: '/',
-        domain: NODE_ENV === 'production' ? undefined : undefined // Let browser decide
+        domain: NODE_ENV === 'production' ? '.cropfield.com.br' : undefined
       });
 
       console.log('[GOOGLE] Cookie set, redirecting to frontend');
-      return res.redirect(`${WEB_URL}/?login=success`);
+      const redirectUrl = NODE_ENV === 'production' ? PRODUCTION_WEB_DOMAIN : WEB_URL;
+      return res.redirect(`${redirectUrl}/?login=success`);
     }
   );
 
@@ -507,10 +522,11 @@ const issueLogin = (res, user) => {
 
   res.cookie('token', token, {
     httpOnly: true,
-    secure: false, // Set to true in production with HTTPS
+    secure: NODE_ENV === 'production',
     sameSite: 'lax',
     maxAge: 24 * 60 * 60 * 1000,
-    path: '/'
+    path: '/',
+    domain: NODE_ENV === 'production' ? '.cropfield.com.br' : undefined
   });
 
   res.json({
@@ -1217,13 +1233,13 @@ if (NODE_ENV === 'production') {
 
 // 404 handlers - must be after all other routes
 // 404 handlers for API routes
-app.all(/^\/api\/.*/, (req, res) => {
+app.use('/api/*', (req, res) => {
   console.log('[404] API route not found:', req.method, req.path);
   res.status(404).json({ error: 'API endpoint not found', path: req.path, method: req.method });
 });
 
 // 404 handlers for Auth routes  
-app.all(/^\/auth\/.*/, (req, res) => {
+app.use('/auth/*', (req, res) => {
   console.log('[404] Auth route not found:', req.method, req.path);
   res.status(404).json({ error: 'Auth endpoint not found', path: req.path, method: req.method });
 });

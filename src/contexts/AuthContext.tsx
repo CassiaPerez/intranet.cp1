@@ -1,7 +1,10 @@
 // src/contexts/AuthContext.tsx
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
-const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, ''); // Remove trailing slashes
+// Production API URL configuration
+const API_BASE = import.meta.env.PROD 
+  ? 'https://intranet.cropfield.com.br' 
+  : (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
 
 // Modelo unificado do usuário que o app vai usar
 export type User = {
