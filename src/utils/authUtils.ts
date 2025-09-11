@@ -27,9 +27,12 @@ export const makeAuthenticatedRequest = async (url: string, options: RequestInit
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
-      ...options.headers,
     },
     ...options,
+    headers: {
+      ...defaultOptions.headers,
+      ...options.headers,
+    },
   };
   
   try {

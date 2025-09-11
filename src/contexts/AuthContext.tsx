@@ -208,27 +208,19 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       console.log('[AUTH] Starting logout process...');
       localStorage.removeItem(STORAGE_KEY);
       
-      // Try both logout endpoints
-      const logoutPromises = [
-        fetch(`${API_BASE}/auth/logout`, { 
-          method: 'POST', 
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' }
-        }),
-        fetch(`${API_BASE}/api/auth/logout`, { 
-          method: 'POST', 
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' }
-        })
-      ];
+      // Clear user state immediately
+      setUser(null);
       
-      await Promise.allSettled(logoutPromises);
+      // Try logout endpoint
+      await fetch(`${API_BASE || ''}/auth/logout`, { 
+        method: 'POST', 
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      }).catch(() => {}); // Ignore errors
+      
       console.log('[AUTH] Logout requests completed');
     } catch (error) {
       console.error('[AUTH] Logout error:', error);
-    } finally {
-      setUser(null);
-      console.log('[AUTH] Logout completed - user cleared');
     }
   };
 
@@ -243,29 +235,12 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       // Clear the URL parameter
       window.history.replaceState({}, '', window.location.pathname);
       // Reload user data
-      reload();
+      setTimeout(() => reload(), 100);
     } else if (errorParam) {
       console.log('[AUTH] Login error detected in URL:', errorParam);
       // The LoginPage component will handle showing the error
     }
-  }, []);
-
-  // Legacy logout method for backward compatibility
-  const legacyLogout = async () => {
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-      await fetch(`${API_BASE}/auth/logout`, { 
-        method: 'POST', 
-        credentials: 'include' 
-      }).catch(() => {}); // ignore errors on logout
-    } catch (error) {
-      // mesmo que falhe, vamos limpar o estado local
-      console.log('[AUTH] Legacy logout error (ignored):', error);
-    } finally {
-      setUser(null);
-      console.log('[AUTH] Logout completed');
-    }
-  };
+  }, [reload]);
 
   const value = useMemo<AuthContextType>(() => ({
     user,

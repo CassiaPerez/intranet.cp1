@@ -26,8 +26,6 @@ function App() {
           <div className="min-h-screen bg-gray-50">
             <Routes>
               <Route path="/login" element={<LoginPage />} />
-              <Route path="/oauth/google" element={<GoogleOAuth />} />
-              <Route path="/oauth/*" element={<GoogleOAuth />} />
               <Route
                 path="/"
                 element={
@@ -116,8 +114,6 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route path="/google/*" element={<GoogleOAuth />} />
-              <Route path="/auth/google/*" element={<GoogleOAuth />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
             <Toaster position="top-right" />

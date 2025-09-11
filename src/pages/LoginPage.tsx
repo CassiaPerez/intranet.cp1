@@ -50,31 +50,9 @@ export const LoginPage: React.FC = () => {
   const handleGoogleLogin = () => {
     console.log('[LOGIN] Iniciando login Google...');
     
-    // Check if Google OAuth is enabled and get proper URLs
-    fetch(`${API_BASE || ''}/api/config`, { credentials: 'include' })
-      .then(res => res.json())
-      .then(config => {
-        console.log('[LOGIN] Server config:', config);
-        
-        if (!config.googleEnabled) {
-          console.log('[LOGIN] Google OAuth not enabled on server');
-          toast.error('Login com Google não está configurado. Use email e senha.');
-          return;
-        }
-        
-        const googleUrl = `${API_BASE || ''}/auth/google`;
-        console.log('[LOGIN] Redirecting to Google OAuth:', googleUrl);
-        window.location.href = googleUrl;
-      })
-      .catch(error => {
-        // Fallback: try direct redirect
-        console.error('[LOGIN] Config check failed:', error);
-        console.log('[LOGIN] Trying direct redirect anyway...');
-        
-        const googleUrl = `${API_BASE || ''}/auth/google`;
-        console.log('[LOGIN] Direct redirect to:', googleUrl);
-        window.location.href = googleUrl;
-      });
+    const googleUrl = `${API_BASE || ''}/auth/google`;
+    console.log('[LOGIN] Redirecting to Google OAuth:', googleUrl);
+    window.location.href = googleUrl;
   };
 
   const handleManualLogin = async (e: React.FormEvent) => {
@@ -90,43 +68,19 @@ export const LoginPage: React.FC = () => {
     try {
       console.log('[LOGIN] Tentando login manual para:', email);
       
-      // Try both endpoints to ensure compatibility
-      const endpoints = [
-        `${API_BASE || ''}/auth/login`,
-        `${API_BASE || ''}/api/auth/login`
-      ];
-      
-      let response = null;
-      let lastError = null;
-      
-      for (const endpoint of endpoints) {
-        try {
-          console.log('[LOGIN] Trying endpoint:', endpoint);
-          response = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            credentials: 'include',
-            body: JSON.stringify({ email, password }),
-          });
-          
-          if (response.ok) {
-            console.log('[LOGIN] Login successful via:', endpoint);
-            break;
-          } else {
-            console.log('[LOGIN] Login failed via:', endpoint, 'status:', response.status);
-            lastError = await response.json().catch(() => ({ error: 'Unknown error' }));
-          }
-        } catch (error) {
-          console.log('[LOGIN] Network error with endpoint:', endpoint, error);
-          lastError = { error: 'Network error' };
-        }
-      }
-      
-      if (!response || !response.ok) {
-        console.log('[LOGIN] All endpoints failed, last error:', lastError);
-        toast.error(lastError?.error || 'Erro de conexão. Verifique se o servidor está rodando.');
+      const response = await fetch(`${API_BASE || ''}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+        console.log('[LOGIN] Login failed:', response.status, errorData);
+        toast.error(errorData.error || 'Credenciais inválidas');
         return;
       }
 
@@ -146,8 +100,8 @@ export const LoginPage: React.FC = () => {
       
       // Force reload to update auth context
       setTimeout(() => {
-        window.location.href = '/';
-      }, 500);
+        window.location.reload();
+      }, 100);
       
     } catch (error) {
       console.error('Login error:', error);

@@ -403,11 +403,11 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
   console.log('⚠️ Google OAuth não configurado - defina GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET');
   app.get('/auth/google', (_req, res) => {
     console.log('[GOOGLE] OAuth not configured, redirecting with error');
-    res.redirect(`${WEB_URL}/login?error=google_not_configured`);
+    res.status(503).json({ error: 'Google OAuth não configurado' });
   });
   app.get('/api/auth/google', (_req, res) => {
     console.log('[GOOGLE] OAuth not configured, redirecting with error');
-    res.redirect(`${WEB_URL}/login?error=google_not_configured`);
+    res.status(503).json({ error: 'Google OAuth não configurado' });
   });
 }
 
@@ -1072,14 +1072,16 @@ if (NODE_ENV === 'production') {
 }
 
 // 404 handlers - must be after all other routes
-app.use('/api/*', (req, res) => {
+// 404 handlers for API routes
+app.all(/^\/api\/.*/, (req, res) => {
   console.log('[404] API route not found:', req.method, req.path);
   res.status(404).json({ error: 'API endpoint not found', path: req.path, method: req.method });
 });
 
-app.use('/auth/*', (req, res) => {
+// 404 handlers for Auth routes  
+app.all(/^\/auth\/.*/, (req, res) => {
   console.log('[404] Auth route not found:', req.method, req.path);
-  res.status(404).json({ error: 'API endpoint not found', path: req.path, method: req.method });
+  res.status(404).json({ error: 'Auth endpoint not found', path: req.path, method: req.method });
 });
 
 app.use((err, _req, res, _next) => {

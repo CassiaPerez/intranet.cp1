@@ -15,20 +15,12 @@ const GoogleOAuth: React.FC = () => {
     // Log the redirect for debugging
     console.log('[GOOGLE-OAUTH] Redirect received:', location.search, location.pathname);
     
-    // Handle specific OAuth callback scenarios
-    const urlParams = new URLSearchParams(location.search);
-    const error = urlParams.get('error');
-    const login = urlParams.get('login');
-    
-    if (error) {
-      console.log('[GOOGLE-OAUTH] Error in callback:', error);
-      // Let the auth context handle the error display
-    } else if (login === 'success') {
-      console.log('[GOOGLE-OAUTH] Success in callback, reloading auth state');
-      // Force reload of auth state
-      reload();
+    // Force reload on callback
+    if (!isAuthenticated && !loading) {
+      console.log('[GOOGLE-OAUTH] Not authenticated yet, forcing reload...');
+      setTimeout(() => reload(), 500);
     }
-  }, [location]);
+  }, [location, isAuthenticated, loading, reload]);
 
   if (loading) {
     return (

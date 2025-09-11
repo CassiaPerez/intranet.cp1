@@ -70,20 +70,15 @@ export default defineConfig(({ mode }) => {
         // REST
         '/api': { 
           ...commonProxyOpts,
-          // Don't rewrite API paths
         },
 
         // Autenticação (Google + logout)
         '/auth': { 
           ...commonProxyOpts,
-          // Don't rewrite auth paths
         },
 
         // Health check endpoints
         '/healthz': { ...commonProxyOpts },
-        
-        // Config endpoint
-        '/config': { ...commonProxyOpts },
       },
     },
     build: {
