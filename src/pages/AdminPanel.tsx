@@ -204,7 +204,7 @@ export const AdminPanel: React.FC = () => {
       console.log(`[ADMIN] Exporting ranking as ${formato}...`);
       
       const currentMonth = new Date().toISOString().slice(0, 7);
-      const response = await fetch(`/api/admin/export/ranking.${formato}?month=${currentMonth}`, {
+      const response = await fetch(`/api/admin/export/ranking/${formato}?month=${currentMonth}`, {
         credentials: 'include'
       });
 
@@ -785,7 +785,7 @@ const handleExportActivities = async (formato: 'csv' | 'excel' | 'pdf') => {
     console.log(`[ADMIN] Exporting activities as ${formato}...`);
     
     const currentMonth = new Date().toISOString().slice(0, 7);
-    const response = await fetch(`/api/admin/export/activities.${formato}?month=${currentMonth}`, {
+    const response = await fetch(`/api/admin/export/activities/${formato}?month=${currentMonth}`, {
       credentials: 'include'
     });
 
@@ -823,7 +823,7 @@ const handleExportTrocas = async (formato: 'csv' | 'excel') => {
   try {
     console.log(`[ADMIN] Exporting protein exchanges as ${formato}...`);
     
-    const response = await fetch(`/api/admin/export/protein-exchanges.${formato}`, {
+    const response = await fetch(`/api/admin/export/protein-exchanges/${formato}`, {
       credentials: 'include'
     });
 
@@ -858,7 +858,7 @@ const handleExportEquipamentos = async (formato: 'csv' | 'excel') => {
   try {
     console.log(`[ADMIN] Exporting equipment requests as ${formato}...`);
     
-    const response = await fetch(`/api/admin/export/equipment.${formato}`, {
+    const response = await fetch(`/api/admin/export/equipment/${formato}`, {
       credentials: 'include'
     });
 
@@ -892,7 +892,7 @@ const handleExportReservas = async (formato: 'csv' | 'excel') => {
   try {
     console.log(`[ADMIN] Exporting room reservations as ${formato}...`);
     
-    const response = await fetch(`/api/admin/export/reservations.${formato}`, {
+    const response = await fetch(`/api/admin/export/reservations/${formato}`, {
       credentials: 'include'
     });
 
@@ -926,7 +926,7 @@ const handleExportBackup = async (formato: 'json' | 'sql') => {
   try {
     console.log(`[ADMIN] Creating backup as ${formato}...`);
     
-    const response = await fetch(`/api/admin/export/full-backup.${formato}`, {
+    const response = await fetch(`/api/admin/export/full-backup/${formato}`, {
       credentials: 'include'
     });
 
@@ -1016,7 +1016,7 @@ const handleUpdateUser = async (userId: string, updates: Partial<any>) => {
 const handleExport = async (formato: 'csv' | 'excel' | 'pdf') => {
   try {
     const currentMonth = new Date().toISOString().slice(0, 7);
-    const response = await fetch(`/api/admin/export/users.${formato}?month=${currentMonth}`, {
+    const response = await fetch(`/api/admin/export/users/${formato}?month=${currentMonth}`, {
       credentials: 'include'
     });
 
