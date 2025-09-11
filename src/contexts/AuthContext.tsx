@@ -230,7 +230,12 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
 
   const loginManual = async (usuario: string, senha: string): Promise<boolean> => {
     try {
-      const response = await fetch(`${API_BASE}/api/login-admin`, {
+      console.log('[AUTH] Attempting manual login for usuario:', usuario);
+      
+      const loginUrl = `${API_BASE}/api/login-admin`;
+      console.log('[AUTH] Login URL:', loginUrl);
+      
+      const response = await fetch(loginUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -239,22 +244,29 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         body: JSON.stringify({ usuario, senha })
       });
 
+      console.log('[AUTH] Login response status:', response.status);
+      
       if (!response.ok) {
-        console.error('[AUTH] Manual login failed:', response.status);
+        const errorText = await response.text().catch(() => '');
+        console.error('[AUTH] Manual login failed:', response.status, response.statusText);
+        console.error('[AUTH] Error response body:', errorText);
         return false;
       }
 
       const data = await response.json();
+      console.log('[AUTH] Login response data:', { hasUser: !!data.user, hasToken: !!data.token });
+      
       const u = normalizeUser(data.user || data);
       
       if (u) {
         const filledUser = fillMissingFields(u);
         setUser(filledUser);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(filledUser));
-        console.log('[AUTH] Manual login successful:', filledUser.email);
+        console.log('[AUTH] ✅ Manual login successful for:', filledUser.email || filledUser.usuario);
         return true;
       }
       
+      console.log('[AUTH] Failed to normalize user data:', data);
       return false;
     } catch (error) {
       console.error('[AUTH] Manual login error:', error);

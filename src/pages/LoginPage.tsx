@@ -59,27 +59,29 @@ export const LoginPage: React.FC = () => {
     e.preventDefault();
     
     if (!username || !password) {
-      toast.error('Preencha usuário e senha!');
+      toast.error('Preencha usuario e senha!');
       return;
     }
 
     setLoading(true);
     
     try {
+      console.log('[LOGIN-PAGE] Attempting login for usuario:', username);
       const success = await loginManual(username, password);
       
       if (success) {
         toast.success('Login realizado com sucesso!');
-        // Redirect to admin after successful manual login
+        console.log('[LOGIN-PAGE] ✅ Login successful, redirecting...');
         setTimeout(() => {
-          window.location.href = '/admin';
+          window.location.href = '/';
         }, 500);
       } else {
-        toast.error('Usuário ou senha inválidos');
+        console.log('[LOGIN-PAGE] ❌ Login failed');
+        toast.error('Usuario ou senha inválidos');
       }
       
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('[LOGIN-PAGE] Login error:', error);
       toast.error('Erro de conexão. Tente novamente.');
     } finally {
       setLoading(false);
@@ -130,7 +132,7 @@ export const LoginPage: React.FC = () => {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Digite seu usuário"
+                  placeholder="Digite seu usuario"
                   required
                 />
               </div>
@@ -174,7 +176,7 @@ export const LoginPage: React.FC = () => {
               <strong>Contas de Teste:</strong><br />
               <strong>Login Manual:</strong> <code>admin-ti / admin123</code> ou <code>admin-rh / admin123</code><br />
               <span className="text-xs text-gray-500">
-                Para colaboradores, use "Entrar com Google"
+                Apenas para administradores TI e RH
               </span>
             </p>
             
