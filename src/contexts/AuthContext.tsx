@@ -72,11 +72,11 @@ function normalizeUser(raw: any): User | null {
 function fillMissingFields(u: User): User {
   const role = u.role && u.role.trim()
     ? u.role
-    : (u.email === 'admin@grupocropfield.com.br' || u.setor === 'TI' ? 'admin' : (u.setor === 'RH' ? 'rh' : 'colaborador'));
+    : (u.email?.includes('admin-ti') || u.setor === 'TI' ? 'admin' : (u.setor === 'RH' || u.email?.includes('admin-rh') ? 'admin' : 'colaborador'));
   
   const setor = u.setor && u.setor.trim() 
     ? u.setor 
-    : (u.email === 'admin@grupocropfield.com.br' ? 'TI' : 'Geral');
+    : (u.email?.includes('admin-ti') ? 'TI' : (u.email?.includes('admin-rh') ? 'RH' : 'Geral'));
     
   return { ...u, role, setor, sector: setor };
 }
