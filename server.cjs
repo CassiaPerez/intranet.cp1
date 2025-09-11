@@ -415,8 +415,7 @@ try {
   });
 } catch (error) {
   console.error('❌ Failed to start server:', error);
-  console.error('❌ Try running: npm run clean:db');
-  setTimeout(() => process.exit(1), 1000);
+  process.exit(1);
 }
 
 // Graceful shutdown
