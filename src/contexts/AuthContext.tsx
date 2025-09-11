@@ -29,7 +29,6 @@ type AuthContextType = {
   loading: boolean;
   loginWithGoogle: () => void;
   loginManual: (usuario: string, senha: string) => Promise<boolean>;
-  loginManual: (usuario: string, senha: string) => Promise<boolean>;
   reload: () => Promise<void>;
   logout: () => Promise<void>;
 };
@@ -229,6 +228,40 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     }
   };
 
+  const loginManual = async (usuario: string, senha: string): Promise<boolean> => {
+    try {
+      const response = await fetch(`${API_BASE}/api/login-admin`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ usuario, senha })
+      });
+
+      if (!response.ok) {
+        console.error('[AUTH] Manual login failed:', response.status);
+        return false;
+      }
+
+      const data = await response.json();
+      const u = normalizeUser(data.user || data);
+      
+      if (u) {
+        const filledUser = fillMissingFields(u);
+        setUser(filledUser);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(filledUser));
+        console.log('[AUTH] Manual login successful:', filledUser.email);
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('[AUTH] Manual login error:', error);
+      return false;
+    }
+  };
+
   // Handle URL parameters for login success/error
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -255,7 +288,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     loginManual,
     reload,
     logout
-  }), [user, loading]);
+  }), [user, loading, loginManual]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
