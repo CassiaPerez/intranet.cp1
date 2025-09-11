@@ -29,6 +29,7 @@ type AuthContextType = {
   loading: boolean;
   loginWithGoogle: () => void;
   loginManual: (usuario: string, senha: string) => Promise<boolean>;
+  loginManual: (usuario: string, senha: string) => Promise<boolean>;
   reload: () => Promise<void>;
   logout: () => Promise<void>;
 };
@@ -251,6 +252,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     isAuthenticated: !!user,
     loading,
     loginWithGoogle,
+    loginManual,
     reload,
     logout
   }), [user, loading]);
