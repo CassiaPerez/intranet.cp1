@@ -4,8 +4,6 @@ import { Eye, EyeOff, User, Lock, Chrome } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
-const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
-
 export const LoginPage: React.FC = () => {
   const { isAuthenticated, loginManual } = useAuth();
   const [searchParams] = useSearchParams();
@@ -48,18 +46,17 @@ export const LoginPage: React.FC = () => {
   }
 
   const handleGoogleLogin = () => {
-    console.log('[LOGIN] Iniciando login Google...');
-    
-    const googleUrl = '/auth/google'; // Use relative path for Vite proxy
-    console.log('[LOGIN] Redirecting to Google OAuth:', googleUrl);
-    window.location.href = googleUrl;
+    console.log('[LOGIN-PAGE] Starting Google login redirect...');
+    window.location.href = '/auth/google';
   };
 
   const handleManualLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('[LOGIN-PAGE] Form submitted with usuario:', username);
+    
     if (!username || !password) {
-      toast.error('Preencha usuario e senha!');
+      toast.error('Preencha usuário e senha!');
       return;
     }
 
@@ -71,13 +68,11 @@ export const LoginPage: React.FC = () => {
       
       if (success) {
         toast.success('Login realizado com sucesso!');
-        console.log('[LOGIN-PAGE] ✅ Login successful, redirecting...');
-        setTimeout(() => {
-          window.location.href = '/';
-        }, 500);
+        console.log('[LOGIN-PAGE] ✅ Login successful');
+        // The context will handle the redirect automatically
       } else {
         console.log('[LOGIN-PAGE] ❌ Login failed');
-        toast.error('Usuario ou senha inválidos');
+        toast.error('Usuário ou senha inválidos');
       }
       
     } catch (error) {
@@ -174,21 +169,13 @@ export const LoginPage: React.FC = () => {
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               <strong>Contas de Teste:</strong><br />
-              <strong>Login Manual:</strong> <code>admin-ti / admin123</code> ou <code>admin-rh / admin123</code><br />
-              <span className="text-xs text-gray-500">
-                Apenas para administradores TI e RH
-              </span>
+              <code>admin-ti</code> / <code>admin123</code> (TI)<br />
+              <code>admin-rh</code> / <code>admin123</code> (RH)
             </p>
             
             <div className="mt-4 p-3 bg-blue-50 rounded-lg">
               <p className="text-xs text-blue-700">
-                💡 <strong>Para login com Google:</strong> Entre em contato com o administrador para autorizar seu email corporativo no sistema.
-              </p>
-            </div>
-            
-            <div className="mt-2 p-2 bg-gray-50 rounded-lg">
-              <p className="text-xs text-gray-600">
-                🔧 <strong>Login Manual:</strong> Apenas para administradores TI e RH
+                💡 Use as credenciais de teste acima para acessar o painel administrativo
               </p>
             </div>
           </div>

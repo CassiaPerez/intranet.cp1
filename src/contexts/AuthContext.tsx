@@ -1,11 +1,6 @@
 // src/contexts/AuthContext.tsx
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
-// Production API URL configuration
-const API_BASE = import.meta.env.PROD 
-  ? 'https://intranet.cropfield.com.br' 
-  : (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
-
 // Modelo unificado do usuário que o app vai usar
 export type User = {
   id: string;
@@ -91,8 +86,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
 
   async function fetchMe(): Promise<User | null> {
     try {
-      const meUrl = `${API_BASE}/api/me`;
-      console.log('[AUTH] Fetching user from:', meUrl);
+      console.log('[AUTH] Fetching user from /api/me');
       
       const res = await fetch('/api/me', {  // Use relative path for Vite proxy
         credentials: 'include',
@@ -102,30 +96,17 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       });
       
       if (!res.ok) {
-        const errorText = await res.text().catch(() => 'No response body');
-        console.log('[AUTH] API /me failed:', res.status, res.statusText, 'body:', errorText.slice(0, 200));
+        console.log('[AUTH] API /me failed:', res.status, res.statusText);
         return null;
       }
 
-      // Algumas hospedagens retornam texto — lidamos com ambos
-      const text = await res.text();
-      if (!text) {
-        console.log('[AUTH] API /me returned empty response');
-        return null;
-      }
+      const data = await res.json();
+      console.log('[AUTH] /api/me response data keys:', Object.keys(data || {}));
 
-      let data: any;
-      try { 
-        data = JSON.parse(text); 
-      } catch (e) {
-        console.error('[AUTH] Failed to parse /me response:', e, 'text:', text.slice(0, 200));
-        return null;
-      }
-
-      const raw = data.user ?? data; // aceita { ok, user } ou objeto direto
+      const raw = data; // Backend returns user data directly
       let u = normalizeUser(raw);
       if (!u) {
-        console.log('[AUTH] Failed to normalize user data:', raw);
+        console.log('[AUTH] Failed to normalize user data');
         return null;
       }
       
@@ -181,30 +162,8 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
 
   const loginWithGoogle = () => {
     // Redireciona para o backend iniciar o OAuth
-    console.log('[AUTH] Starting Google login...');
-    
-    // Check if Google OAuth is enabled first
-    fetch(`${API_BASE}/api/config`, { credentials: 'include' })
-      .then(res => res.json())
-      .then(config => {
-        console.log('[AUTH] Config loaded:', config);
-        
-        if (!config.googleEnabled) {
-          console.warn('[AUTH] Google OAuth not enabled on server');
-          // Still try to redirect, let server handle the error
-        }
-        
-        const googleUrl = `${API_BASE}/auth/google`;
-        console.log('[AUTH] Redirecting to Google OAuth:', googleUrl);
-        window.location.href = googleUrl;
-      })
-      .catch(error => {
-        console.error('[AUTH] Failed to check config:', error);
-        // Fallback: try direct redirect anyway
-        const googleUrl = `${API_BASE}/auth/google`;
-        console.log('[AUTH] Config check failed, trying direct redirect to:', googleUrl);
-        window.location.href = googleUrl;
-      });
+    console.log('[AUTH] Starting Google login redirect...');
+    window.location.href = '/auth/google';
   };
 
   const logout = async () => {
@@ -216,7 +175,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       setUser(null);
       
       // Try logout endpoint
-      await fetch(`${API_BASE || ''}/auth/logout`, { 
+      await fetch('/api/logout', { 
         method: 'POST', 
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
@@ -232,10 +191,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     try {
       console.log('[AUTH] Attempting manual login for usuario:', usuario);
       
-      const loginUrl = '/api/login-admin'; // Use relative path for Vite proxy
-      console.log('[AUTH] Login URL:', loginUrl);
-      
-      const response = await fetch(loginUrl, {
+      const response = await fetch('/api/login-admin', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -247,22 +203,21 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       console.log('[AUTH] Login response status:', response.status);
       
       if (!response.ok) {
-        const errorText = await response.text().catch(() => '');
-        console.error('[AUTH] Manual login failed:', response.status, response.statusText);
-        console.error('[AUTH] Error response body:', errorText);
+        const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+        console.error('[AUTH] Manual login failed:', response.status, errorData.error);
         return false;
       }
 
       const data = await response.json();
-      console.log('[AUTH] Login response data:', { hasUser: !!data.user, hasToken: !!data.token });
+      console.log('[AUTH] Login response data keys:', Object.keys(data || {}));
       
-      const u = normalizeUser(data.user || data);
+      const u = normalizeUser(data);
       
       if (u) {
         const filledUser = fillMissingFields(u);
         setUser(filledUser);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(filledUser));
-        console.log('[AUTH] ✅ Manual login successful for:', filledUser.email || filledUser.usuario);
+        console.log('[AUTH] ✅ Manual login successful for:', filledUser.usuario);
         return true;
       }
       
@@ -290,7 +245,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       console.log('[AUTH] Login error detected in URL:', errorParam);
       // The LoginPage component will handle showing the error
     }
-  }, [reload]);
+  }, []);
 
   const value = useMemo<AuthContextType>(() => ({
     user,

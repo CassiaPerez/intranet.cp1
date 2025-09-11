@@ -15,6 +15,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'cropfield-secret-key-2025';
 console.log('🚀 Starting Intranet Cropfield Backend...');
 console.log('Port:', PORT);
 console.log('Environment:', process.env.NODE_ENV || 'development');
+console.log('JWT_SECRET configured:', !!JWT_SECRET);
 
 // Ensure data directory exists
 const dataDir = path.join(__dirname, 'data');
@@ -23,38 +24,27 @@ if (!fs.existsSync(dataDir)) {
   console.log('📁 Created data directory');
 }
 
-// Middleware
-app.use(cookieParser());
-app.use(express.json());
-
-// CORS configuration - ONLY relative origins, no absolute URLs in Express routes
-app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:5174', 
-    'http://localhost:5175',
-    'https://intranet.grupocropfield.com.br'
-  ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
-}));
-
-// Database setup with proper path
+// Database setup
 const dbPath = process.env.DATABASE_PATH || path.join(__dirname, 'data', 'database.sqlite');
 console.log('📂 Database path:', dbPath);
 
-const db = new sqlite3.Database(dbPath, (err) => {
-  if (err) {
-    console.error('❌ Error opening database:', err.message);
-    process.exit(1);
-  } else {
-    console.log('✅ Connected to SQLite database');
-    initializeDatabase();
-  }
-});
+let db;
+try {
+  db = new sqlite3.Database(dbPath, (err) => {
+    if (err) {
+      console.error('❌ Error opening database:', err.message);
+      process.exit(1);
+    } else {
+      console.log('✅ Connected to SQLite database');
+      initializeDatabase();
+    }
+  });
+} catch (error) {
+  console.error('❌ Failed to create database connection:', error);
+  process.exit(1);
+}
 
-// Initialize database with admin users
+// Initialize database and create admin users
 function initializeDatabase() {
   console.log('🗃️  Initializing database...');
   
@@ -69,17 +59,21 @@ function initializeDatabase() {
         role TEXT NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
-    `, (err) => {
+    `, function(err) {
       if (err) {
         console.error('❌ Error creating usuarios table:', err.message);
         return;
       }
       
-      console.log('✅ Usuarios table ready');
+      console.log('✅ Usuarios table created/verified');
       
-      // Create admin users
+      // Create admin users with bcrypt hashed passwords
       const adminTiHash = bcrypt.hashSync('admin123', 10);
       const adminRhHash = bcrypt.hashSync('admin123', 10);
+      
+      console.log('🔐 Creating admin users...');
+      console.log('TI hash sample:', adminTiHash.substring(0, 20) + '...');
+      console.log('RH hash sample:', adminRhHash.substring(0, 20) + '...');
       
       // Insert admin-ti
       db.run(`
@@ -104,231 +98,240 @@ function initializeDatabase() {
           console.log('✅ Admin RH created: admin-rh / admin123');
         }
       });
+      
+      // Verify users were created
+      setTimeout(() => {
+        db.all("SELECT usuario, setor, role FROM usuarios", [], (err, rows) => {
+          if (err) {
+            console.error('❌ Error verifying users:', err.message);
+          } else {
+            console.log('📋 Users in database:', rows);
+          }
+        });
+      }, 100);
     });
   });
 }
 
+// Middleware setup - ORDER IS IMPORTANT
+app.use(cookieParser());
+app.use(express.json());
+
+// CORS configuration - ONLY origins, NO absolute URLs in routes
+app.use(cors({
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:5174', 
+    'http://localhost:5175',
+    'https://intranet.grupocropfield.com.br'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
+}));
+
 // Authentication middleware
-const authenticateToken = (req, res, next) => {
+const auth = (req, res, next) => {
   const token = req.cookies?.token || req.headers.authorization?.replace('Bearer ', '');
   
+  console.log('[AUTH-MIDDLEWARE] Checking token:', !!token);
+  
   if (!token) {
+    console.log('[AUTH-MIDDLEWARE] ❌ No token provided');
     return res.status(401).json({ error: 'Token de acesso requerido' });
   }
   
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
+    console.log('[AUTH-MIDDLEWARE] ✅ Token valid for user:', decoded.usuario);
     next();
   } catch (error) {
-    console.log('🔐 Invalid token:', error.message);
+    console.log('[AUTH-MIDDLEWARE] ❌ Invalid token:', error.message);
     return res.status(401).json({ error: 'Token inválido' });
   }
 };
 
-// ===== ROUTES - ALL RELATIVE PATHS, NO ABSOLUTE URLs =====
+// ===== ROUTES - ALL RELATIVE PATHS ONLY =====
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ ok: true, status: 'healthy', timestamp: new Date().toISOString() });
-});
-
-// Configuration endpoint
-app.get('/api/config', (req, res) => {
-  res.json({
-    environment: process.env.NODE_ENV || 'development',
-    googleEnabled: false // Disabled for now
+  console.log('[HEALTH] Health check requested');
+  res.json({ 
+    ok: true, 
+    status: 'healthy', 
+    timestamp: new Date().toISOString(),
+    database: 'connected'
   });
 });
 
-// Manual admin login - FIXED ROUTE
+// Manual admin login - MAIN LOGIN ROUTE
 app.post('/api/login-admin', async (req, res) => {
   try {
+    console.log('[LOGIN] 🔐 Login attempt started');
+    console.log('[LOGIN] Request body keys:', Object.keys(req.body || {}));
+    
     const { usuario, senha } = req.body;
     
-    console.log('[LOGIN-ADMIN] 🔐 Login attempt for usuario:', usuario);
+    // Sanitize and validate input
+    const usuarioTrimmed = String(usuario || '').trim();
+    const senhaTrimmed = String(senha || '').trim();
+    
+    console.log('[LOGIN] Usuario (trimmed):', usuarioTrimmed);
+    console.log('[LOGIN] Senha provided:', !!senhaTrimmed);
 
-    if (!usuario || !senha) {
-      console.log('[LOGIN-ADMIN] ❌ Missing credentials');
+    if (!usuarioTrimmed || !senhaTrimmed) {
+      console.log('[LOGIN] ❌ Missing credentials - usuario:', !!usuarioTrimmed, 'senha:', !!senhaTrimmed);
       return res.status(400).json({ error: 'Usuário e senha são obrigatórios' });
     }
 
     // Search user in database
-    db.get("SELECT * FROM usuarios WHERE usuario = ?", [usuario], async (err, row) => {
+    console.log('[LOGIN] 🔍 Searching user in database...');
+    db.get("SELECT * FROM usuarios WHERE usuario = ?", [usuarioTrimmed], async (err, row) => {
       if (err) {
-        console.error('[LOGIN-ADMIN] ❌ Database error:', err.message);
+        console.error('[LOGIN] ❌ Database error:', err.message);
         return res.status(500).json({ error: 'Erro interno do servidor' });
       }
 
+      console.log('[LOGIN] Database query result:', !!row);
+      
       if (!row) {
-        console.log('[LOGIN-ADMIN] ❌ Usuario not found:', usuario);
+        console.log('[LOGIN] ❌ User not found:', usuarioTrimmed);
         return res.status(401).json({ error: 'Usuário ou senha inválidos' });
       }
       
-      console.log('[LOGIN-ADMIN] ✅ User found:', {
+      console.log('[LOGIN] ✅ User found:', {
         id: row.id,
         usuario: row.usuario,
         setor: row.setor, 
-        role: row.role
+        role: row.role,
+        hasHash: !!row.senha_hash
       });
       
-      // Verify password
+      // Verify password with bcrypt
       try {
-        const isValidPassword = await bcrypt.compare(senha, row.senha_hash);
-        console.log('[LOGIN-ADMIN] 🔑 Password validation result:', isValidPassword);
+        console.log('[LOGIN] 🔑 Verifying password...');
+        console.log('[LOGIN] Hash from DB:', row.senha_hash.substring(0, 20) + '...');
+        console.log('[LOGIN] Password to verify:', senhaTrimmed.substring(0, 3) + '...');
+        
+        const isValidPassword = await bcrypt.compare(senhaTrimmed, row.senha_hash);
+        console.log('[LOGIN] 🔑 Password validation result:', isValidPassword);
         
         if (!isValidPassword) {
-          console.log('[LOGIN-ADMIN] ❌ Invalid password for usuario:', usuario);
+          console.log('[LOGIN] ❌ Invalid password for usuario:', usuarioTrimmed);
           return res.status(401).json({ error: 'Usuário ou senha inválidos' });
         }
         
-        // Verify admin role
+        // Check admin role
         if (row.role !== 'admin') {
-          console.log('[LOGIN-ADMIN] ❌ User is not admin, role:', row.role);
-          return res.status(401).json({ error: 'Apenas administradores podem fazer login manual' });
+          console.log('[LOGIN] ❌ User is not admin, role:', row.role);
+          return res.status(403).json({ error: 'Apenas administradores podem fazer login manual' });
         }
         
-        // Login successful
-        console.log('[LOGIN-ADMIN] ✅ Login successful for:', usuario);
+        // Login successful - create JWT token
+        console.log('[LOGIN] ✅ Login successful for:', usuarioTrimmed);
         
-        // Create JWT token
-        const token = jwt.sign(
-          { 
-            id: row.id,
-            usuario: row.usuario, 
-            setor: row.setor,
-            role: row.role
-          },
-          JWT_SECRET,
-          { expiresIn: '24h' }
-        );
+        const tokenPayload = { 
+          id: row.id,
+          usuario: row.usuario, 
+          setor: row.setor,
+          role: row.role
+        };
+        
+        const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '7d' });
+        console.log('[LOGIN] 🎫 JWT token generated, length:', token.length);
         
         // Set secure cookie
         res.cookie('token', token, {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production', 
-          maxAge: 24 * 60 * 60 * 1000, // 24 hours
+          maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
           sameSite: 'lax'
         });
         
-        // Return user data
+        // Return user data (same format as token payload + token for frontend storage)
         const userData = {
           id: row.id.toString(),
           usuario: row.usuario,
-          nome: `Admin ${row.setor}`,
-          email: `${row.usuario}@grupocropfield.com.br`,
           setor: row.setor,
           role: row.role,
-          token: token
+          token: token // Include token for frontend if needed
         };
         
-        res.json({
-          success: true,
-          ...userData
-        });
+        console.log('[LOGIN] 📤 Sending response with user data');
+        res.json(userData);
         
       } catch (passwordError) {
-        console.error('[LOGIN-ADMIN] ❌ Password verification error:', passwordError);
+        console.error('[LOGIN] ❌ Password verification error:', passwordError);
         return res.status(500).json({ error: 'Erro na verificação da senha' });
       }
     });
     
   } catch (error) {
-    console.error('[LOGIN-ADMIN] ❌ General error:', error);
+    console.error('[LOGIN] ❌ General login error:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
 
-// Get current user
-app.get('/api/me', (req, res) => {
-  try {
-    const token = req.cookies?.token || req.headers.authorization?.replace('Bearer ', '');
-    
-    if (!token) {
-      console.log('[ME] No token found');
-      return res.status(401).json({ error: 'Token não encontrado' });
-    }
-    
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET);
-      console.log('[ME] Token decoded for user ID:', decoded.id);
-      
-      db.get("SELECT * FROM usuarios WHERE id = ?", [decoded.id], (err, row) => {
-        if (err) {
-          console.error('[ME] Database error:', err.message);
-          return res.status(500).json({ error: 'Erro no banco de dados' });
-        }
-        
-        if (!row) {
-          console.log('[ME] User not found in DB for ID:', decoded.id);
-          return res.status(401).json({ error: 'Usuário não encontrado' });
-        }
-        
-        const userData = {
-          id: row.id.toString(),
-          usuario: row.usuario,
-          nome: `Admin ${row.setor}`,
-          email: `${row.usuario}@grupocropfield.com.br`,
-          setor: row.setor,
-          role: row.role
-        };
-        
-        console.log('[ME] ✅ User data sent for:', userData.usuario);
-        res.json({ user: userData });
-      });
-      
-    } catch (jwtError) {
-      console.error('[ME] JWT verification failed:', jwtError.message);
-      res.status(401).json({ error: 'Token inválido' });
-    }
-  } catch (error) {
-    console.error('[ME] General error:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
-  }
+// Get current user - protected route
+app.get('/api/me', auth, (req, res) => {
+  console.log('[ME] Current user request for:', req.user?.usuario);
+  
+  // Return user data from token (already validated by auth middleware)
+  const userData = {
+    id: req.user.id.toString(),
+    usuario: req.user.usuario,
+    setor: req.user.setor,
+    role: req.user.role
+  };
+  
+  console.log('[ME] ✅ Returning user data for:', userData.usuario);
+  res.json(userData);
 });
 
 // Logout endpoint
 app.post('/api/logout', (req, res) => {
-  try {
-    console.log('[LOGOUT] Clearing token cookie');
-    res.clearCookie('token');
-    res.json({ success: true, message: 'Logout realizado com sucesso' });
-  } catch (error) {
-    console.error('[LOGOUT] Error:', error);
-    res.status(500).json({ error: 'Erro no logout' });
-  }
+  console.log('[LOGOUT] Logout request received');
+  res.clearCookie('token');
+  res.json({ success: true, message: 'Logout realizado com sucesso' });
 });
 
-// Google auth routes (placeholder - not implemented)
+// Google auth routes (placeholder for future implementation)
 app.get('/auth/google', (req, res) => {
-  res.status(501).json({ error: 'Google OAuth não implementado ainda' });
+  console.log('[GOOGLE] Google OAuth requested (not implemented)');
+  res.status(501).json({ error: 'Google OAuth não implementado ainda. Use login manual.' });
 });
 
 app.get('/auth/google/callback', (req, res) => {
+  console.log('[GOOGLE] Google OAuth callback (not implemented)');
   res.status(501).json({ error: 'Google OAuth não implementado ainda' });
 });
 
-// Test endpoint to list users
+// Test endpoint to verify users exist
 app.get('/api/test-users', (req, res) => {
+  console.log('[TEST] Listing all users...');
   db.all("SELECT id, usuario, setor, role, created_at FROM usuarios", [], (err, rows) => {
     if (err) {
-      console.error('Test users error:', err.message);
+      console.error('[TEST] Error querying users:', err.message);
       return res.status(500).json({ error: err.message });
     }
     
-    console.log('[TEST-USERS] Found', rows?.length || 0, 'users');
+    console.log('[TEST] Found', rows?.length || 0, 'users');
     res.json({ users: rows || [] });
   });
 });
 
-// Admin dashboard (protected route example)
-app.get('/api/admin/dashboard', authenticateToken, (req, res) => {
+// Admin dashboard (example protected route)
+app.get('/api/admin/dashboard', auth, (req, res) => {
+  console.log('[ADMIN] Dashboard access by:', req.user?.usuario);
+  
   if (req.user.role !== 'admin') {
+    console.log('[ADMIN] ❌ Access denied, role:', req.user.role);
     return res.status(403).json({ error: 'Acesso negado - apenas administradores' });
   }
   
   res.json({
-    message: 'Painel administrativo',
+    message: 'Painel administrativo acessado',
     user: req.user,
     stats: {
       usuarios_ativos: 2,
@@ -360,11 +363,12 @@ if (process.env.NODE_ENV === 'production') {
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('❌ Server error:', err);
-  res.status(500).json({ error: 'Erro interno do servidor', details: err.message });
+  res.status(500).json({ error: 'Erro interno do servidor' });
 });
 
-// 404 handler for API routes
+// 404 handler for API routes only
 app.use('/api/*', (req, res) => {
+  console.log('[404] API endpoint not found:', req.originalUrl);
   res.status(404).json({ error: `Endpoint não encontrado: ${req.originalUrl}` });
 });
 
@@ -374,19 +378,24 @@ const server = app.listen(PORT, () => {
   console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🗄️  Database: ${dbPath}`);
   console.log('📋 Available endpoints:');
-  console.log('   GET  /api/health');
-  console.log('   POST /api/login-admin');
-  console.log('   GET  /api/me');
-  console.log('   POST /api/logout');
-  console.log('   GET  /auth/google');
-  console.log('   GET  /auth/google/callback');
+  console.log('   GET  /api/health        - Health check');
+  console.log('   POST /api/login-admin   - Manual admin login');
+  console.log('   GET  /api/me            - Current user (protected)');
+  console.log('   POST /api/logout        - Logout');
+  console.log('   GET  /api/test-users    - List users (dev)');
+  console.log('   GET  /auth/google       - Google OAuth (placeholder)');
+  console.log('   GET  /auth/google/callback - Google callback (placeholder)');
+  console.log('');
+  console.log('🔑 Test credentials:');
+  console.log('   admin-ti / admin123 (TI Admin)');
+  console.log('   admin-rh / admin123 (RH Admin)');
 });
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('🛑 SIGTERM received, shutting down gracefully...');
   server.close(() => {
-    db.close((err) => {
+    db?.close((err) => {
       if (err) {
         console.error('❌ Error closing database:', err.message);
       } else {
@@ -400,7 +409,7 @@ process.on('SIGTERM', () => {
 process.on('SIGINT', () => {
   console.log('🛑 SIGINT received, shutting down gracefully...');
   server.close(() => {
-    db.close((err) => {
+    db?.close((err) => {
       if (err) {
         console.error('❌ Error closing database:', err.message);
       } else {
