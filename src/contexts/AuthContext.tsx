@@ -38,14 +38,20 @@ export const useAuth = () => {
 // Normaliza diferentes formatos vindos do backend/localStorage
 function normalizeUser(raw: any): User | null {
   if (!raw) return null;
-  const id = String(raw.id ?? raw.userId ?? raw.uid ?? '');
-  const email = raw.email ?? '';
-  const nome = raw.nome ?? raw.name ?? raw.displayName ?? '';
-  const setor = raw.setor ?? raw.sector ?? '';
-  const role = raw.role ?? '';
-  const picture = raw.picture ?? raw.avatar ?? raw.photoURL ?? raw.avatar_url ?? '';
+  
+  console.log('[AUTH] 📊 Normalizing user data:', Object.keys(raw));
+  
+  const id = String(raw.id ?? '');
+  const email = raw.email || `${raw.usuario}@grupocropfield.com.br`;
+  const nome = raw.nome || raw.name || raw.usuario || '';
+  const setor = raw.setor || raw.sector || '';
+  const role = raw.role || '';
+  const picture = raw.picture || raw.avatar || raw.avatar_url || '';
 
-  if (!email || !id) return null;
+  if (!id) {
+    console.log('[AUTH] ❌ Missing required fields - id:', !!id);
+    return null;
+  }
 
   return {
     id,
@@ -66,13 +72,19 @@ function normalizeUser(raw: any): User | null {
 
 /** Heurística de fallback caso o backend não envie role/setor (evitar “travar” login) */
 function fillMissingFields(u: User): User {
+  console.log('[AUTH] 📝 Filling missing fields for user:', u.usuario || u.name);
+  
   const role = u.role && u.role.trim()
     ? u.role
-    : (u.email?.includes('admin-ti') || u.setor === 'TI' ? 'admin' : (u.setor === 'RH' || u.email?.includes('admin-rh') ? 'admin' : 'colaborador'));
+    : (u.nome?.includes('admin-ti') || u.setor === 'TI' ? 'admin' : 
+       u.nome?.includes('admin-rh') || u.setor === 'RH' ? 'admin' : 'colaborador');
   
   const setor = u.setor && u.setor.trim() 
     ? u.setor 
-    : (u.email?.includes('admin-ti') ? 'TI' : (u.email?.includes('admin-rh') ? 'RH' : 'Geral'));
+    : (u.nome?.includes('admin-ti') ? 'TI' : 
+       u.nome?.includes('admin-rh') ? 'RH' : 'Geral');
+    
+  console.log('[AUTH] ✅ Filled fields - role:', role, 'setor:', setor);
     
   return { ...u, role, setor, sector: setor };
 }
@@ -187,9 +199,22 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     }
   };
 
-  const loginManual = async (usuario: string, senha: string): Promise<boolean> => {
+  const loginManual = async (username: string, password: string): Promise<boolean> => {
     try {
-      console.log('[AUTH] Attempting manual login for usuario:', usuario);
+      console.log('[AUTH] 🔐 Starting manual login for usuario:', username);
+      
+      // Validate inputs
+      const usuarioTrimmed = String(username || '').trim();
+      const senhaTrimmed = String(password || '').trim();
+      
+      console.log('[AUTH] 📝 Login validation:');
+      console.log('   Usuario provided:', !!usuarioTrimmed);
+      console.log('   Password provided:', !!senhaTrimmed);
+      
+      if (!usuarioTrimmed || !senhaTrimmed) {
+        console.log('[AUTH] ❌ Missing credentials');
+        return false;
+      }
       
       const response = await fetch('/api/login-admin', {
         method: 'POST',
@@ -197,19 +222,39 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({ usuario, senha })
+        body: JSON.stringify({ 
+          usuario: usuarioTrimmed, 
+          senha: senhaTrimmed 
+        })
       });
 
-      console.log('[AUTH] Login response status:', response.status);
+      console.log('[AUTH] 📡 Login response status:', response.status);
+      console.log('[AUTH] 📡 Login response headers:', Object.fromEntries(response.headers.entries()));
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
-        console.error('[AUTH] Manual login failed:', response.status, errorData.error);
+        const errorText = await response.text().catch(() => '');
+        console.error('[AUTH] ❌ Login failed:');
+        console.error('   Status:', response.status);
+        console.error('   Status Text:', response.statusText);
+        console.error('   Response Body:', errorText);
+        
+        try {
+          const errorData = JSON.parse(errorText);
+          console.error('   Parsed Error:', errorData.error);
+        } catch {
+          console.error('   Raw Response:', errorText);
+        }
+        
         return false;
       }
 
       const data = await response.json();
-      console.log('[AUTH] Login response data keys:', Object.keys(data || {}));
+      console.log('[AUTH] ✅ Login success! Response data:');
+      console.log('   Keys:', Object.keys(data || {}));
+      console.log('   Usuario:', data.usuario);
+      console.log('   Setor:', data.setor);
+      console.log('   Role:', data.role);
+      console.log('   Has Token:', !!data.token);
       
       const u = normalizeUser(data);
       
@@ -217,14 +262,14 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         const filledUser = fillMissingFields(u);
         setUser(filledUser);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(filledUser));
-        console.log('[AUTH] ✅ Manual login successful for:', filledUser.usuario);
+        console.log('[AUTH] ✅ User context updated successfully');
         return true;
       }
       
-      console.log('[AUTH] Failed to normalize user data:', data);
+      console.log('[AUTH] ❌ Failed to normalize user data:', data);
       return false;
     } catch (error) {
-      console.error('[AUTH] Manual login error:', error);
+      console.error('[AUTH] ❌ Network/fetch error:', error.message);
       return false;
     }
   };

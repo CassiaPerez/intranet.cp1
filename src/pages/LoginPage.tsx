@@ -53,31 +53,33 @@ export const LoginPage: React.FC = () => {
   const handleManualLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    console.log('[LOGIN-PAGE] Form submitted with usuario:', username);
+    console.log('[LOGIN-PAGE] 🔐 Form submitted:');
+    console.log('   Username field value:', username);
+    console.log('   Password field length:', password.length);
     
     if (!username || !password) {
-      toast.error('Preencha usuário e senha!');
+      toast.error('Preencha todos os campos!');
       return;
     }
 
     setLoading(true);
     
     try {
-      console.log('[LOGIN-PAGE] Attempting login for usuario:', username);
-      const success = await loginManual(username, password);
+      console.log('[LOGIN-PAGE] 📡 Calling loginManual...');
+      const success = await loginManual(username.trim(), password.trim());
       
       if (success) {
+        console.log('[LOGIN-PAGE] ✅ Login successful, waiting for redirect...');
         toast.success('Login realizado com sucesso!');
-        console.log('[LOGIN-PAGE] ✅ Login successful');
         // The context will handle the redirect automatically
       } else {
-        console.log('[LOGIN-PAGE] ❌ Login failed');
+        console.log('[LOGIN-PAGE] ❌ Login failed - invalid credentials');
         toast.error('Usuário ou senha inválidos');
       }
       
     } catch (error) {
-      console.error('[LOGIN-PAGE] Login error:', error);
-      toast.error('Erro de conexão. Tente novamente.');
+      console.error('[LOGIN-PAGE] ❌ Login error:', error);
+      toast.error('Erro de conexão com o servidor. Verifique se o backend está rodando.');
     } finally {
       setLoading(false);
     }
