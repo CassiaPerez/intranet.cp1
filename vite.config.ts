@@ -86,16 +86,14 @@ export default defineConfig(({ mode }) => {
       sourcemap: true,
       outDir: 'dist',
       assetsDir: 'assets',
-      rollupOptions: {
+      rollupOptions: { // Merged duplicate rollupOptions
         output: {
           manualChunks: {
             vendor: ['react', 'react-dom'],
             calendar: ['@fullcalendar/react', '@fullcalendar/daygrid', '@fullcalendar/timegrid'],
             utils: ['date-fns', 'lucide-react']
           }
-        }
-      },
-      rollupOptions: {
+        },
         onwarn: (warning, defaultHandler) => {
           if (warning.code === 'SOURCEMAP_ERROR') return
           defaultHandler(warning)

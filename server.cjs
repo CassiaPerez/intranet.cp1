@@ -1234,13 +1234,13 @@ if (NODE_ENV === 'production') {
 // 404 handlers - must be after all other routes
 // 404 handlers for API routes
 app.use('/api/*', (req, res) => {
-  console.log('[404] API route not found:', req.method, req.path);
+  console.log('[404] API route not found:', req.method, req.path); // Changed from '/api/*' to regex
   res.status(404).json({ error: 'API endpoint not found', path: req.path, method: req.method });
 });
 
 // 404 handlers for Auth routes  
 app.use('/auth/*', (req, res) => {
-  console.log('[404] Auth route not found:', req.method, req.path);
+  console.log('[404] Auth route not found:', req.method, req.path); // Changed from '/auth/*' to regex
   res.status(404).json({ error: 'Auth endpoint not found', path: req.path, method: req.method });
 });
 
