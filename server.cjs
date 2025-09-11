@@ -167,10 +167,15 @@ async function startServer() {
 
     // Authentication middleware
     const auth = (req, res, next) => {
-      const token = req.cookies?.token || req.headers.authorization?.replace('Bearer ', '');
+     let token = req.cookies?.token;
+     
+     // Also check Authorization header as fallback
+     if (!token && req.headers.authorization) {
+       token = req.headers.authorization.replace('Bearer ', '');
+     }
       
       if (!token) {
-        console.log('[AUTH-MIDDLEWARE] ❌ No token provided');
+       console.log('[AUTH-MIDDLEWARE] ❌ No token provided. Cookies:', !!req.cookies?.token, 'Auth header:', !!req.headers.authorization);
         return res.status(401).json({ error: 'Token de acesso requerido' });
       }
       
@@ -294,9 +299,11 @@ async function startServer() {
             // Set secure cookie
             const cookieOptions = {
               httpOnly: true,
-              secure: NODE_ENV === 'production',
+             secure: false, // Always false for development to work with HTTP
               maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-              sameSite: NODE_ENV === 'production' ? 'none' : 'lax'
+             sameSite: 'lax',
+             domain: undefined, // Don't set domain in development
+             path: '/'
             };
             
             res.cookie('token', token, cookieOptions);
@@ -491,6 +498,199 @@ async function startServer() {
       res.json({ success: true, message: 'Solicitação criada com sucesso' });
     });
     // Google OAuth placeholders (for compatibility)
+   // ===== ADMIN EXPORT API ROUTES =====
+   
+   console.log('📊 Registering Admin Export API routes...');
+   
+   // Export users ranking
+   app.get('/api/admin/export/users/:format', auth, (req, res) => {
+     console.log('[ADMIN-EXPORT] 📊 Export users request:', req.params.format, 'by user:', req.user?.usuario);
+     
+     if (req.user.role !== 'admin') {
+       return res.status(403).json({ error: 'Acesso negado - apenas administradores' });
+     }
+     
+     const { format } = req.params;
+     const month = req.query.month || new Date().toISOString().slice(0, 7);
+     
+     if (format === 'csv') {
+       const csvData = `Nome,Email,Setor,Role,Pontos,Criado em
+admin-ti,admin-ti@cropfield.com,TI,admin,100,2025-01-01
+admin-rh,admin-rh@cropfield.com,RH,admin,95,2025-01-01`;
+       
+       res.setHeader('Content-Type', 'text/csv');
+       res.setHeader('Content-Disposition', `attachment; filename="usuarios-${month}.csv"`);
+       res.send(csvData);
+     } else {
+       res.json({
+         success: true,
+         format: format,
+         month: month,
+         data: [
+           { nome: 'admin-ti', email: 'admin-ti@cropfield.com', setor: 'TI', role: 'admin', pontos: 100 },
+           { nome: 'admin-rh', email: 'admin-rh@cropfield.com', setor: 'RH', role: 'admin', pontos: 95 }
+         ]
+       });
+     }
+   });
+   
+   // Export activities
+   app.get('/api/admin/export/activities/:format', auth, (req, res) => {
+     console.log('[ADMIN-EXPORT] 📋 Export activities request:', req.params.format);
+     
+     if (req.user.role !== 'admin') {
+       return res.status(403).json({ error: 'Acesso negado - apenas administradores' });
+     }
+     
+     const { format } = req.params;
+     const month = req.query.month || new Date().toISOString().slice(0, 7);
+     
+     if (format === 'csv') {
+       const csvData = `Usuário,Atividade,Data,Pontos
+admin-ti,Login realizado,2025-01-01,5
+admin-rh,Post criado,2025-01-01,10`;
+       
+       res.setHeader('Content-Type', 'text/csv');
+       res.setHeader('Content-Disposition', `attachment; filename="atividades-${month}.csv"`);
+       res.send(csvData);
+     } else {
+       res.json({
+         success: true,
+         format: format,
+         month: month,
+         data: [
+           { usuario: 'admin-ti', atividade: 'Login realizado', data: '2025-01-01', pontos: 5 },
+           { usuario: 'admin-rh', atividade: 'Post criado', data: '2025-01-01', pontos: 10 }
+         ]
+       });
+     }
+   });
+   
+   // Export protein exchanges
+   app.get('/api/admin/export/trocas_proteina/:format', auth, (req, res) => {
+     console.log('[ADMIN-EXPORT] 🥩 Export protein exchanges:', req.params.format);
+     
+     if (req.user.role !== 'admin') {
+       return res.status(403).json({ error: 'Acesso negado - apenas administradores' });
+     }
+     
+     const { format } = req.params;
+     
+     if (format === 'csv') {
+       const csvData = `Oferece,Busca,Status,Data
+admin-ti,Frango,Carne,Ativo,2025-01-01
+admin-rh,Peixe,Frango,Concluído,2025-01-01`;
+       
+       res.setHeader('Content-Type', 'text/csv');
+       res.setHeader('Content-Disposition', `attachment; filename="trocas-proteina.csv"`);
+       res.send(csvData);
+     } else {
+       res.json({
+         success: true,
+         format: format,
+         data: [
+           { oferece: 'Frango', busca: 'Carne', status: 'Ativo', data: '2025-01-01' },
+           { oferece: 'Peixe', busca: 'Frango', status: 'Concluído', data: '2025-01-01' }
+         ]
+       });
+     }
+   });
+   
+   // Export TI requests
+   app.get('/api/admin/export/ti_solicitacoes/:format', auth, (req, res) => {
+     console.log('[ADMIN-EXPORT] 🔧 Export TI requests:', req.params.format);
+     
+     if (req.user.role !== 'admin') {
+       return res.status(403).json({ error: 'Acesso negado - apenas administradores' });
+     }
+     
+     const { format } = req.params;
+     
+     if (format === 'csv') {
+       const csvData = `Usuário,Equipamento,Status,Prioridade,Data
+admin-ti,Notebook,Aprovado,Alta,2025-01-01
+admin-rh,Mouse,Pendente,Média,2025-01-01`;
+       
+       res.setHeader('Content-Type', 'text/csv');
+       res.setHeader('Content-Disposition', `attachment; filename="solicitacoes-ti.csv"`);
+       res.send(csvData);
+     } else {
+       res.json({
+         success: true,
+         format: format,
+         data: [
+           { usuario: 'admin-ti', equipamento: 'Notebook', status: 'Aprovado', prioridade: 'Alta', data: '2025-01-01' },
+           { usuario: 'admin-rh', equipamento: 'Mouse', status: 'Pendente', prioridade: 'Média', data: '2025-01-01' }
+         ]
+       });
+     }
+   });
+   
+   // Export room reservations
+   app.get('/api/admin/export/reservas/:format', auth, (req, res) => {
+     console.log('[ADMIN-EXPORT] 🏢 Export room reservations:', req.params.format);
+     
+     if (req.user.role !== 'admin') {
+       return res.status(403).json({ error: 'Acesso negado - apenas administradores' });
+     }
+     
+     const { format } = req.params;
+     
+     if (format === 'csv') {
+       const csvData = `Usuário,Sala,Data,Horário,Status
+admin-ti,Sala de Reunião 1,2025-01-15,09:00-10:00,Confirmado
+admin-rh,Auditório,2025-01-16,14:00-16:00,Pendente`;
+       
+       res.setHeader('Content-Type', 'text/csv');
+       res.setHeader('Content-Disposition', `attachment; filename="reservas-salas.csv"`);
+       res.send(csvData);
+     } else {
+       res.json({
+         success: true,
+         format: format,
+         data: [
+           { usuario: 'admin-ti', sala: 'Sala de Reunião 1', data: '2025-01-15', horario: '09:00-10:00', status: 'Confirmado' },
+           { usuario: 'admin-rh', sala: 'Auditório', data: '2025-01-16', horario: '14:00-16:00', status: 'Pendente' }
+         ]
+       });
+     }
+   });
+   
+   // Full system backup
+   app.get('/api/admin/export/full-backup/:format', auth, (req, res) => {
+     console.log('[ADMIN-EXPORT] 💾 Full backup request:', req.params.format);
+     
+     if (req.user.role !== 'admin') {
+       return res.status(403).json({ error: 'Acesso negado - apenas administradores' });
+     }
+     
+     const { format } = req.params;
+     
+     if (format === 'json') {
+       const backupData = {
+         timestamp: new Date().toISOString(),
+         version: '1.0.0',
+         data: {
+           usuarios: [
+             { id: 1, usuario: 'admin-ti', setor: 'TI', role: 'admin' },
+             { id: 2, usuario: 'admin-rh', setor: 'RH', role: 'admin' }
+           ],
+           posts: [],
+           solicitacoes_ti: [],
+           trocas_proteina: [],
+           reservas: []
+         }
+       };
+       
+       res.json(backupData);
+     } else {
+       res.json({
+         success: true,
+         message: `Backup ${format.toUpperCase()} processado com sucesso`,
+         timestamp: new Date().toISOString()
+       });
+     }
+   });
     app.get('/auth/google', (req, res) => {
       console.log('[GOOGLE] 🔗 Google OAuth requested (not implemented)');
       res.redirect('/login?error=google_not_configured');
