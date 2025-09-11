@@ -1009,6 +1009,150 @@ app.get('/api/admin/dashboard', authenticateToken, (req, res) => {
 });
 
 // ======================
+// Admin Export Routes
+// ======================
+app.get('/api/admin/export/:type.:format', authenticateToken, requireAdminOrHRorTI, async (req, res) => {
+  const { type, format } = req.params;
+  
+  try {
+    let data = [];
+    let filename = '';
+    
+    // Get data based on type
+    switch (type) {
+      case 'activities':
+        // Get activities data from pontos table
+        data = await new Promise((resolve, reject) => {
+          db.all(`
+            SELECT p.*, u.nome, u.email, u.setor 
+            FROM pontos p 
+            JOIN usuarios u ON p.usuario_id = u.id 
+            ORDER BY p.created_at DESC
+          `, (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows || []);
+          });
+        });
+        filename = 'atividades-gamificacao';
+        break;
+        
+      case 'users':
+        // Get users data
+        data = await new Promise((resolve, reject) => {
+          db.all(`
+            SELECT id, nome, email, setor, role, ativo, pontos_gamificacao, created_at 
+            FROM usuarios 
+            ORDER BY created_at DESC
+          `, (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows || []);
+          });
+        });
+        filename = 'usuarios';
+        break;
+        
+      case 'reservations':
+        // Get reservations data
+        data = await new Promise((resolve, reject) => {
+          db.all(`
+            SELECT r.*, u.nome as usuario_nome, u.email 
+            FROM reservas r 
+            JOIN usuarios u ON r.usuario_id = u.id 
+            ORDER BY r.data DESC, r.inicio DESC
+          `, (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows || []);
+          });
+        });
+        filename = 'reservas-salas';
+        break;
+        
+      case 'mural':
+        // Get mural posts data
+        data = await new Promise((resolve, reject) => {
+          db.all(`
+            SELECT mp.*, u.nome as autor, u.email,
+                   (SELECT COUNT(*) FROM mural_likes ml WHERE ml.post_id = mp.id) as likes_count,
+                   (SELECT COUNT(*) FROM mural_comments mc WHERE mc.post_id = mp.id) as comments_count
+            FROM mural_posts mp
+            JOIN usuarios u ON mp.usuario_id = u.id
+            ORDER BY mp.created_at DESC
+          `, (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows || []);
+          });
+        });
+        filename = 'posts-mural';
+        break;
+        
+      default:
+        return res.status(400).json({ error: 'Tipo de export não suportado' });
+    }
+    
+    // Handle different formats
+    switch (format) {
+      case 'csv':
+        if (data.length === 0) {
+          return res.status(200).send('Nenhum dado encontrado');
+        }
+        
+        // Generate CSV
+        const headers = Object.keys(data[0]);
+        const csvRows = [headers.join(',')];
+        
+        data.forEach(row => {
+          const values = headers.map(header => {
+            const value = row[header];
+            // Handle null/undefined values and escape quotes
+            if (value == null) return '';
+            const stringValue = String(value);
+            // Escape quotes and wrap in quotes if contains comma, newline, or quote
+            if (stringValue.includes(',') || stringValue.includes('\n') || stringValue.includes('"')) {
+              return '"' + stringValue.replace(/"/g, '""') + '"';
+            }
+            return stringValue;
+          });
+          csvRows.push(values.join(','));
+        });
+        
+        const csvContent = csvRows.join('\n');
+        
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}.csv"`);
+        res.send('\ufeff' + csvContent); // BOM for proper UTF-8 handling in Excel
+        break;
+        
+      case 'xlsx':
+        // For Excel, return JSON data (as per expert recommendation)
+        res.json({
+          success: true,
+          data: data,
+          filename: `${filename}.xlsx`,
+          message: 'Dados exportados com sucesso'
+        });
+        break;
+        
+      case 'pdf':
+        // For PDF, return JSON data (as per expert recommendation)
+        res.json({
+          success: true,
+          data: data,
+          filename: `${filename}.pdf`,
+          message: 'Dados exportados com sucesso'
+        });
+        break;
+        
+      default:
+        res.status(400).json({ error: 'Formato não suportado' });
+    }
+    
+  } catch (error) {
+    console.error('[EXPORT] Error:', error);
+    res.status(500).json({ error: 'Erro interno do servidor', details: error.message });
+  }
+});
+
+// ======================
 // Health/Ping e 404
 // ======================
 app.get('/api/health', (_req, res) => res.json({ status: 'OK', timestamp: new Date().toISOString() }));
