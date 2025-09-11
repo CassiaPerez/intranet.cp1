@@ -63,7 +63,7 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     server: {
       port: 5173,
-      strictPort: true,
+      strictPort: false,
       host: '0.0.0.0',
       watch: { ignored: ['**/data/**'] },
       hmr: { overlay: false },
