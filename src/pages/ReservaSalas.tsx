@@ -62,7 +62,10 @@ export const ReservaSalas: React.FC = () => {
 
   const loadReservations = async () => {
     try {
-      const response = await fetch('/api/reservas', { credentials: 'include' });
+      const response = await fetch('/api/reservas', { 
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
       if (response.ok) {
         const data = await response.json();
         const formattedEvents = (data.reservas || []).map((reserva: any) => {
@@ -95,7 +98,10 @@ export const ReservaSalas: React.FC = () => {
 
   const loadAgendamentos = async () => {
     try {
-      const response = await fetch('/api/portaria/agendamentos', { credentials: 'include' });
+      const response = await fetch('/api/portaria/agendamentos', { 
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
       if (response.ok) {
         const data = await response.json();
         setAgendamentos(data.agendamentos || []);
