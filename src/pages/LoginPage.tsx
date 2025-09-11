@@ -7,9 +7,8 @@ import toast from 'react-hot-toast';
 const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
 
 export const LoginPage: React.FC = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loginManual } = useAuth();
   const [searchParams] = useSearchParams();
-  const [email, setEmail] = useState(''); // Changed from username to email
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -67,42 +66,17 @@ export const LoginPage: React.FC = () => {
     setLoading(true);
     
     try {
-      console.log('[LOGIN] Tentando login manual para:', username);
+      const success = await loginManual(username, password);
       
-      const response = await fetch(`${API_BASE || ''}/login-admin`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ usuario: username, senha: password }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
-        console.log('[LOGIN] Login failed:', response.status, errorData);
-        toast.error(errorData.error || 'Credenciais inválidas');
-        return;
+      if (success) {
+        toast.success('Login realizado com sucesso!');
+        // Redirect to admin after successful manual login
+        setTimeout(() => {
+          window.location.href = '/admin';
+        }, 500);
+      } else {
+        toast.error('Usuário ou senha inválidos');
       }
-
-      const data = await response.json();
-      console.log('[LOGIN] Login response:', { 
-        success: !!data.user, 
-        userName: data.user?.nome,
-        userRole: data.user?.role 
-      });
-      
-      // Store user data in localStorage for immediate access
-      if (data.user) {
-        localStorage.setItem('currentUser', JSON.stringify(data.user));
-      }
-      
-      toast.success('Login realizado com sucesso!');
-      
-      // Redirect to admin panel after manual login
-      setTimeout(() => {
-        window.location.href = '/admin';
-      }, 500);
       
     } catch (error) {
       console.error('Login error:', error);

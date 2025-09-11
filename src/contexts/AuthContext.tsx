@@ -28,6 +28,7 @@ type AuthContextType = {
   isAuthenticated: boolean;
   loading: boolean;
   loginWithGoogle: () => void;
+  loginManual: (usuario: string, senha: string) => Promise<boolean>;
   reload: () => Promise<void>;
   logout: () => Promise<void>;
 };
