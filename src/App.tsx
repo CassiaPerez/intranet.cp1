@@ -14,6 +14,7 @@ import { Mural } from './pages/Mural';
 import { AdminPanel } from './pages/AdminPanel';
 import { TrocaProteinas } from './pages/TrocaProteinas';
 import { Aniversariantes } from './pages/Aniversariantes';
+import { DebugInfo } from './components/DebugInfo';
 import './index.css';
 
 function App() {
@@ -115,6 +116,7 @@ function App() {
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
             <Toaster position="top-right" />
+            <DebugInfo />
           </div>
         </Router>
       </GamificationProvider>

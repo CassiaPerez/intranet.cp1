@@ -23,7 +23,7 @@ const app = express();
 const HOST = (process.env.HOST || '0.0.0.0').replace(/^https?:/, '');
 const PORT = Number(process.env.PORT) || 3006;
 const NODE_ENV = process.env.NODE_ENV || 'development';
-const WEB_URL = process.env.WEB_URL || 'http://localhost:5173';
+const WEB_URL = process.env.WEB_URL || `http://localhost:5173`;
 const JWT_SECRET = process.env.JWT_SECRET || 'cropfield-secret-key-2025';
 
 // --- Google OAuth ---
@@ -192,16 +192,26 @@ db.serialize(() => {
 // ======================
 // Middlewares globais
 // ======================
-const allowedFromEnv = (process.env.WEB_URL || 'http://localhost:5173')
-  .split(',').map(s => s.trim()).filter(Boolean);
-const allowedOrigins = [...allowedFromEnv, 'http://127.0.0.1:5173'];
-const originRegexes = [/^https?:\/\/[^/]*\.stackblitz\.io$/i, /^https?:\/\/[^/]*\.netlify\.app$/i];
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:3000',
+  WEB_URL
+].filter(Boolean);
 
+const originRegexes = [
+  /^https?:\/\/[^/]*\.stackblitz\.io$/i, 
+  /^https?:\/\/[^/]*\.netlify\.app$/i,
+  /^https?:\/\/[^/]*\.bolt\.new$/i
+];
 app.use(cors({
   credentials: true,
   origin(origin, cb) {
+    // Allow requests with no origin (e.g., mobile apps, Postman)
     if (!origin) return cb(null, true);
+    
     if (allowedOrigins.includes(origin) || originRegexes.some(rx => rx.test(origin))) return cb(null, true);
+    
     console.warn('[CORS] Bloqueado:', origin);
     return cb(null, false);
   }
@@ -210,7 +220,6 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(morgan('dev'));
-app.use((req,_res,next)=>{ if(['POST','PUT','PATCH'].includes(req.method)){ console.log('[REQ]', req.method, req.path, 'body=', req.body);} next(); });
 
 // ======================
 // Helpers de nome (PATCH #1)
@@ -241,19 +250,30 @@ const ensureDbName = (id, currentDbName, targetName) => {
 // Google OAuth (PATCH #2 no callback)
 // ======================
 if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
+  console.log('🔐 Configurando Google OAuth...');
+  console.log('📍 Callback URL:', GOOGLE_CALLBACK_URL);
+  console.log('🌐 Frontend URL:', WEB_URL);
+
   passport.use(new GoogleStrategy({
     clientID: GOOGLE_CLIENT_ID,
     clientSecret: GOOGLE_CLIENT_SECRET,
-    callbackURL: GOOGLE_CALLBACK_URL
+    callbackURL: GOOGLE_CALLBACK_URL,
+    scope: ['profile', 'email']
   }, async (_accessToken, _refreshToken, profile, done) => {
     try {
       const email = profile.emails?.[0]?.value?.toLowerCase();
+      console.log('[GOOGLE] Processing login for email:', email);
+      
       if (!email) return done(new Error('Email não fornecido pelo Google'), null);
 
       db.get('SELECT * FROM usuarios WHERE email = ? AND ativo = 1', [email], (err, user) => {
         if (err) return done(err, null);
-        if (!user) return done(new Error('Usuário não autorizado. Contate o administrador.'), null);
+        if (!user) {
+          console.log('[GOOGLE] User not found in database:', email);
+          return done(new Error('Usuário não autorizado. Contate o administrador.'), null);
+        }
 
+        console.log('[GOOGLE] User found:', user.email, 'role:', user.role);
         const nomeGoogle = (profile.displayName || `${profile.name?.givenName || ''} ${profile.name?.familyName || ''}`).trim() || 'Usuário';
         const nomeFinal = computeName(user.email, nomeGoogle, null);
 
@@ -286,7 +306,7 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
 
   const googleAuth = passport.authenticate('google', {
     scope: ['profile', 'email'],
-    prompt: 'select_account',
+    prompt: 'select_account consent',
     session: false
   });
 
@@ -294,11 +314,21 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
   app.get('/api/auth/google', googleAuth);
 
   app.get('/auth/google/callback',
-    passport.authenticate('google', { session: false, failureRedirect: WEB_URL + '/login?error=google_auth_failed' }),
+    passport.authenticate('google', { 
+      session: false, 
+      failureRedirect: `${WEB_URL}/login?error=google_auth_failed`,
+      keepSessionInfo: false
+    }),
     (req, res) => {
+      console.log('[GOOGLE] Callback executado');
       const user = req.user;
-      if (!user) return res.redirect(WEB_URL + '/login?error=authentication_failed');
+      
+      if (!user) {
+        console.log('[GOOGLE] Callback sem user');
+        return res.redirect(`${WEB_URL}/login?error=authentication_failed`);
+      }
 
+      console.log('[GOOGLE] Gerando token para:', user.email);
       const token = jwt.sign(
         {
           id: user.id,
@@ -314,20 +344,22 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
         { expiresIn: '24h' }
       );
 
+      console.log('[GOOGLE] Setting cookie and redirecting');
       res.cookie('token', token, {
         httpOnly: true,
         secure: NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 24 * 60 * 60 * 1000
+        maxAge: 24 * 60 * 60 * 1000,
+        path: '/'
       });
 
-      res.redirect(WEB_URL + '/?login=success');
+      res.redirect(`${WEB_URL}/?login=success`);
     }
   );
 } else {
   console.log('⚠️ Google OAuth não configurado - defina GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET');
-  app.get('/auth/google', (_req, res) => res.redirect('/login?error=google_not_configured'));
-  app.get('/api/auth/google', (_req, res) => res.redirect('/login?error=google_not_configured'));
+  app.get('/auth/google', (_req, res) => res.redirect(`${WEB_URL}/login?error=google_not_configured`));
+  app.get('/api/auth/google', (_req, res) => res.redirect(`${WEB_URL}/login?error=google_not_configured`));
 }
 
 // ======================
@@ -468,7 +500,7 @@ app.post('/auth/logout', (_req, res) => { res.clearCookie('token'); res.json({ m
 // ======================
 app.get('/api/me', authenticateToken, (req, res) => {
   db.get(
-    'SELECT id, nome, email, setor, role, can_publish_mural, can_moderate_mural FROM usuarios WHERE id = ?',
+    'SELECT id, nome, email, setor, role, can_publish_mural, can_moderate_mural, pontos_gamificacao FROM usuarios WHERE id = ?',
     [req.user.id],
     (err, user) => {
       if (err || !user) return res.status(404).json({ error: 'User not found' });
@@ -478,7 +510,9 @@ app.get('/api/me', authenticateToken, (req, res) => {
 
       res.json({ user: {
         id: user.id, name, email: user.email, setor: user.setor, sector: user.setor,
-        role: user.role, can_publish_mural: user.can_publish_mural || 0, can_moderate_mural: user.can_moderate_mural || 0
+        role: user.role, can_publish_mural: user.can_publish_mural || 0, 
+        can_moderate_mural: user.can_moderate_mural || 0,
+        pontos_gamificacao: user.pontos_gamificacao || 0
       }});
     }
   );
@@ -872,8 +906,35 @@ app.get('/api/admin/dashboard', authenticateToken, (req, res) => {
 // Health/Ping e 404
 // ======================
 app.get('/api/health', (_req, res) => res.json({ status: 'OK', timestamp: new Date().toISOString() }));
+app.get('/healthz', (_req, res) => res.json({ status: 'OK', timestamp: new Date().toISOString() }));
 app.get('/api/ping', (_req, res) => res.send('pong'));
 
+// Config endpoint for frontend
+app.get('/api/config', (_req, res) => {
+  res.json({
+    googleEnabled: !!(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET),
+    environment: NODE_ENV,
+    version: '1.0.0'
+  });
+});
+
+// Serve static files from dist in production
+if (NODE_ENV === 'production') {
+  const path = require('path');
+  const distPath = path.join(__dirname, 'dist');
+  console.log('📁 Serving static files from:', distPath);
+  app.use(express.static(distPath));
+  
+  // Catch-all handler for SPA
+  app.get('*', (req, res, next) => {
+    // Skip API routes
+    if (req.path.startsWith('/api') || req.path.startsWith('/auth')) {
+      return next();
+    }
+    
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+}
 app.use('/api', (req, res) => {
   res.status(404).json({ error: 'API endpoint not found', path: req.path, method: req.method });
 });
@@ -891,6 +952,7 @@ const server = app.listen(PORT, HOST, () => {
   console.log(`📁 Database: ${dbPath}`);
   console.log(`🌍 Environment: ${NODE_ENV}`);
   console.log(`✅ Frontend (WEB_URL): ${WEB_URL}`);
+  console.log(`🔐 Google OAuth: ${GOOGLE_CLIENT_ID ? 'ENABLED' : 'DISABLED'}`);
   console.log('✅ Server ready to accept connections');
 });
 server.keepAliveTimeout = 65000;

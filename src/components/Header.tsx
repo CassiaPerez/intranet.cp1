@@ -1,10 +1,19 @@
 import React from 'react';
 import { Bell, Search, LogOut } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { ChatBot } from './ChatBot';
+      console.log('[HEADER] Initiating logout...');
+      await logout();
+      
+      // Force navigation to login page
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 100);
 import { useGamification } from '../contexts/GamificationContext';
 
 export const Header: React.FC = () => {
+      // Even if logout fails, redirect to login
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 100);
   const { user, logout } = useAuth();
   const { userStats } = useGamification();
 
@@ -43,7 +52,7 @@ export const Header: React.FC = () => {
           </div>
 
           <button
-            onClick={logout}
+            onClick={handleLogout}
             className="p-2 text-gray-400 hover:text-red-600 transition-colors"
             title="Sair"
           >

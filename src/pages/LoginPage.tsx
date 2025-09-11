@@ -4,7 +4,7 @@ import { Eye, EyeOff, User, Lock, Chrome } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
-const API_BASE = '';
+const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
 
 export const LoginPage: React.FC = () => {
   const { isAuthenticated } = useAuth();
@@ -36,7 +36,25 @@ export const LoginPage: React.FC = () => {
 
   const handleGoogleLogin = () => {
     console.log('[LOGIN] Iniciando login Google...');
-    window.location.href = '/auth/google';
+    
+    // Check if Google OAuth is enabled
+    fetch('/api/config')
+      .then(res => res.json())
+      .then(config => {
+        if (!config.googleEnabled) {
+          toast.error('Login com Google não está configurado. Use email e senha.');
+          return;
+        }
+        
+        const googleUrl = `${API_BASE}/auth/google`;
+        console.log('[LOGIN] Redirecting to Google OAuth:', googleUrl);
+        window.location.href = googleUrl;
+      })
+      .catch(() => {
+        // Fallback: try direct redirect
+        console.log('[LOGIN] Config check failed, trying direct redirect...');
+        window.location.href = `${API_BASE}/auth/google`;
+      });
   };
 
   const handleManualLogin = async (e: React.FormEvent) => {
@@ -74,7 +92,7 @@ export const LoginPage: React.FC = () => {
         
         toast.success('Login realizado com sucesso!');
         
-        // Use React Router navigation instead of window.location
+        // Force reload to update auth context
         setTimeout(() => {
           window.location.reload();
         }, 500);
@@ -183,6 +201,12 @@ export const LoginPage: React.FC = () => {
                 Colaborador: <code>colaborador@grupocropfield.com.br / colab123</code>
               </span>
             </p>
+            
+            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+              <p className="text-xs text-blue-700">
+                💡 <strong>Para login com Google:</strong> Entre em contato com o administrador para autorizar seu email corporativo no sistema.
+              </p>
+            </div>
           </div>
         </div>
       </div>

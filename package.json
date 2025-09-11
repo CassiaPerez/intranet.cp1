@@ -15,7 +15,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "server": "NODE_ENV=development node server.cjs",
-    "clean-demo": "node scripts/clean-demo.cjs"
+    "clean-demo": "node scripts/clean-demo.cjs",
+    "setup-oauth": "node scripts/setup-oauth.js"
   },
   "dependencies": {
     "@fullcalendar/core": "^6.1.18",
