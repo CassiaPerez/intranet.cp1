@@ -54,7 +54,10 @@ export const Mural: React.FC = () => {
   const loadPosts = async () => {
     try {
       setLoading(true);
-      const res = await fetch(apiUrl('/api/mural/posts'), { credentials: 'include' });
+      const res = await fetch('/api/mural/posts', { 
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setPosts(sortPosts(data.posts || []));
@@ -74,7 +77,7 @@ export const Mural: React.FC = () => {
       return;
     }
     try {
-      const res = await fetch(apiUrl('/api/mural/posts'), {
+      const res = await fetch('/api/mural/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -96,7 +99,7 @@ export const Mural: React.FC = () => {
 
   const handleReaction = async (postId: string) => {
     try {
-      const res = await fetch(apiUrl(`/api/mural/${postId}/like`), {
+      const res = await fetch(`/api/mural/${postId}/like`, {
         method: 'POST',
         credentials: 'include',
       });
@@ -114,7 +117,7 @@ export const Mural: React.FC = () => {
     const commentText = (commentTexts[postId] || '').trim();
     if (!commentText) return;
     try {
-      const res = await fetch(apiUrl(`/api/mural/${postId}/comments`), {
+      const res = await fetch(`/api/mural/${postId}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -147,7 +150,10 @@ export const Mural: React.FC = () => {
     }
     try {
       setLoadingComments(prev => ({ ...prev, [postId]: true }));
-      const res = await fetch(apiUrl(`/api/mural/${postId}/comments`), { credentials: 'include' });
+      const res = await fetch(`/api/mural/${postId}/comments`, { 
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setPostComments(prev => ({ ...prev, [postId]: data.comments || [] }));
@@ -162,7 +168,7 @@ export const Mural: React.FC = () => {
   const handleDeleteComment = async (commentId: string, postId: string) => {
     if (!confirm('Tem certeza que deseja excluir este comentário?')) return;
     try {
-      const res = await fetch(apiUrl(`/api/mural/comments/${commentId}`), {
+      const res = await fetch(`/api/mural/comments/${commentId}`, {
         method: 'DELETE',
         credentials: 'include',
       });

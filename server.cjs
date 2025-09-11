@@ -1,12 +1,14 @@
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const cookieParser = require('cookie-parser');
 const path = require('path');
 const fs = require('fs');
-const cookieParser = require('cookie-parser');
 require('dotenv').config();
+
+// Import database module
+const { getDb, run, get, all, tx, initializeDatabase, closeDb } = require('./db.cjs');
 
 const app = express();
 const PORT = process.env.PORT || 3006;
@@ -18,134 +20,25 @@ console.log('📊 Environment:', NODE_ENV);
 console.log('🔌 Port:', PORT);
 console.log('🔐 JWT Secret configured:', !!JWT_SECRET);
 
-// Ensure data directory exists
-const dataDir = path.join(__dirname, 'data');
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
-  console.log('📁 Created data directory:', dataDir);
-}
-
-// Database setup
-const dbPath = process.env.DATABASE_PATH || path.join(__dirname, 'data', 'database.sqlite');
-console.log('🗄️  Database path:', dbPath);
-
-// Initialize database connection
-const db = new sqlite3.Database(dbPath, (err) => {
-  if (err) {
-    console.error('❌ Error opening database:', err.message);
-    process.exit(1);
-  } else {
-    console.log('✅ Connected to SQLite database');
-    initializeDatabase();
-  }
+// Global error handler
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  process.exit(1);
 });
 
-// Database initialization function
-async function initializeDatabase() {
-  return new Promise((resolve, reject) => {
-    console.log('🗃️  Initializing database tables...');
-    
-    db.serialize(() => {
-      // Create usuarios table
-      db.run(`
-        CREATE TABLE IF NOT EXISTS usuarios (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          usuario TEXT UNIQUE NOT NULL,
-          senha_hash TEXT NOT NULL,
-          setor TEXT NOT NULL,
-          role TEXT NOT NULL,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-      `, function(err) {
-        if (err) {
-          console.error('❌ Error creating usuarios table:', err.message);
-          reject(err);
-          return;
-        }
-        
-        console.log('✅ Usuarios table created/verified');
-        createAdminUsers(resolve, reject);
-      });
-    });
-  });
-}
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
 
-// Create admin users function
-function createAdminUsers(resolve, reject) {
-  console.log('👥 Setting up admin users...');
-  
-  // Check if admin users already exist
-  db.get("SELECT COUNT(*) as count FROM usuarios WHERE usuario IN ('admin-ti', 'admin-rh')", [], (err, row) => {
-    if (err) {
-      console.error('❌ Error checking existing users:', err.message);
-      reject(err);
-      return;
-    }
-    
-    const existingCount = row.count || 0;
-    console.log('📊 Existing admin users:', existingCount);
-    
-    if (existingCount >= 2) {
-      console.log('✅ Admin users already exist, skipping creation');
-      resolve();
-      return;
-    }
-    
-    // Create password hashes
-    const adminTiHash = bcrypt.hashSync('admin123', 10);
-    const adminRhHash = bcrypt.hashSync('admin123', 10);
-    
-    console.log('🔐 Generated password hashes');
-    console.log('   TI Hash (first 20 chars):', adminTiHash.substring(0, 20) + '...');
-    console.log('   RH Hash (first 20 chars):', adminRhHash.substring(0, 20) + '...');
-    
-    // Insert admin-ti
-    db.run(`
-      INSERT OR REPLACE INTO usuarios (usuario, senha_hash, setor, role)
-      VALUES (?, ?, ?, ?)
-    `, ['admin-ti', adminTiHash, 'TI', 'admin'], function(err) {
-      if (err) {
-        console.error('❌ Error creating admin-ti:', err.message);
-        reject(err);
-        return;
-      }
-      
-      console.log('✅ Admin TI created: admin-ti / admin123');
-      
-      // Insert admin-rh
-      db.run(`
-        INSERT OR REPLACE INTO usuarios (usuario, senha_hash, setor, role)
-        VALUES (?, ?, ?, ?)
-      `, ['admin-rh', adminRhHash, 'RH', 'admin'], function(err) {
-        if (err) {
-          console.error('❌ Error creating admin-rh:', err.message);
-          reject(err);
-          return;
-        }
-        
-        console.log('✅ Admin RH created: admin-rh / admin123');
-        
-        // Verify creation
-        db.all("SELECT usuario, setor, role FROM usuarios", [], (err, rows) => {
-          if (err) {
-            console.error('❌ Error verifying users:', err.message);
-          } else {
-            console.log('📋 Users in database:', rows);
-          }
-          resolve();
-        });
-      });
-    });
-  });
-}
-
-// Wait for database initialization before setting up middleware
+// Initialize database and start server
 async function startServer() {
   try {
+    // Initialize database first
     await initializeDatabase();
-    console.log('✅ Database initialization complete');
-    
-    // Middleware setup - IMPORTANT: ORDER MATTERS
+    console.log('✅ Database initialized successfully');
+
+    // Setup middleware - ORDER MATTERS
     app.use(cookieParser());
     app.use(express.json({ limit: '10mb' }));
     app.use(express.urlencoded({ extended: true }));
@@ -165,34 +58,38 @@ async function startServer() {
       allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'X-Requested-With']
     }));
 
+    // Request logging middleware
+    app.use((req, res, next) => {
+      console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+      next();
+    });
+
     // Authentication middleware
     const auth = (req, res, next) => {
-     let token = req.cookies?.token;
-     
-     // Also check Authorization header as fallback
-     if (!token && req.headers.authorization) {
-       token = req.headers.authorization.replace('Bearer ', '');
-     }
+      let token = req.cookies?.token;
       
+      // Also check Authorization header as fallback
+      if (!token && req.headers.authorization) {
+        token = req.headers.authorization.replace('Bearer ', '');
+      }
+       
       if (!token) {
-       console.log('[AUTH-MIDDLEWARE] ❌ No token provided. Cookies:', !!req.cookies?.token, 'Auth header:', !!req.headers.authorization);
+        console.log('[AUTH] ❌ No token provided');
         return res.status(401).json({ error: 'Token de acesso requerido' });
       }
       
       try {
         const decoded = jwt.verify(token, JWT_SECRET);
         req.user = decoded;
-        console.log('[AUTH-MIDDLEWARE] ✅ Token valid for user:', decoded.usuario);
+        console.log('[AUTH] ✅ Token valid for user:', decoded.usuario);
         next();
       } catch (error) {
-        console.log('[AUTH-MIDDLEWARE] ❌ Invalid token:', error.message);
+        console.log('[AUTH] ❌ Invalid token:', error.message);
         return res.status(401).json({ error: 'Token inválido' });
       }
     };
 
     // ===== API ROUTES =====
-
-    console.log('🛠️  Registering API routes...');
 
     // Health check
     app.get('/api/health', (req, res) => {
@@ -206,132 +103,86 @@ async function startServer() {
       });
     });
 
+    // ===== AUTHENTICATION =====
+    
     // Manual admin login
     app.post('/api/login-admin', async (req, res) => {
       try {
-        console.log('[LOGIN] 🔐 Login attempt started');
-        console.log('[LOGIN] Request headers:', Object.keys(req.headers || {}));
-        console.log('[LOGIN] Request body:', req.body ? 'present' : 'missing');
-        
+        console.log('[LOGIN] 🔐 Login attempt');
         const { usuario, senha } = req.body;
         
-        // Validate input
         const usuarioClean = String(usuario || '').trim();
         const senhaClean = String(senha || '').trim();
         
-        console.log('[LOGIN] 📝 Credentials check:');
-        console.log('   Usuario (trimmed):', usuarioClean);
-        console.log('   Senha provided:', !!senhaClean);
-        console.log('   Senha length:', senhaClean.length);
-
         if (!usuarioClean || !senhaClean) {
           console.log('[LOGIN] ❌ Missing credentials');
-          return res.status(400).json({ 
-            error: 'Usuário e senha são obrigatórios',
-            details: {
-              usuario: !!usuarioClean,
-              senha: !!senhaClean
-            }
-          });
+          return res.status(400).json({ error: 'Usuário e senha são obrigatórios' });
         }
 
         // Search user in database
-        console.log('[LOGIN] 🔍 Searching for user:', usuarioClean);
-        
-        db.get("SELECT * FROM usuarios WHERE usuario = ?", [usuarioClean], async (err, row) => {
-          if (err) {
-            console.error('[LOGIN] ❌ Database error:', err.message);
-            return res.status(500).json({ error: 'Erro interno do servidor' });
-          }
+        const row = await get(`
+          SELECT id, usuario, senha_hash, setor, role, nome, email 
+          FROM usuarios 
+          WHERE usuario = ?
+        `, [usuarioClean]);
 
-          console.log('[LOGIN] 📊 Database query result:');
-          console.log('   User found:', !!row);
-          
-          if (!row) {
-            console.log('[LOGIN] ❌ User not found in database:', usuarioClean);
-            
-            // List all users for debugging
-            db.all("SELECT usuario FROM usuarios", [], (err, allUsers) => {
-              if (!err) {
-                console.log('[LOGIN] 📋 Available users:', allUsers.map(u => u.usuario));
-              }
-            });
-            
-            return res.status(401).json({ error: 'Usuário ou senha inválidos' });
-          }
-          
-          console.log('[LOGIN] ✅ User found in database:');
-          console.log('   ID:', row.id);
-          console.log('   Usuario:', row.usuario);
-          console.log('   Setor:', row.setor);
-          console.log('   Role:', row.role);
-          console.log('   Has hash:', !!row.senha_hash);
-          console.log('   Hash preview:', row.senha_hash ? row.senha_hash.substring(0, 20) + '...' : 'none');
-          
-          // Verify password with bcrypt
-          try {
-            console.log('[LOGIN] 🔑 Starting password verification...');
-            console.log('   Input password:', senhaClean.substring(0, 3) + '***');
-            console.log('   Stored hash preview:', row.senha_hash.substring(0, 20) + '...');
-            
-            const isValidPassword = await bcrypt.compare(senhaClean, row.senha_hash);
-            console.log('[LOGIN] 🔑 Password verification result:', isValidPassword);
-            
-            if (!isValidPassword) {
-              console.log('[LOGIN] ❌ Password verification failed for user:', usuarioClean);
-              return res.status(401).json({ error: 'Usuário ou senha inválidos' });
-            }
-            
-            // Login successful
-            console.log('[LOGIN] ✅ Password verification successful!');
-            
-            const tokenPayload = { 
-              id: row.id,
-              usuario: row.usuario, 
-              setor: row.setor,
-              role: row.role
-            };
-            
-            console.log('[LOGIN] 🎫 Creating JWT token with payload:', tokenPayload);
-            const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '7d' });
-            console.log('[LOGIN] 🎫 JWT token generated, length:', token.length);
-            
-            // Set secure cookie
-            const cookieOptions = {
-              httpOnly: true,
-             secure: false, // Always false for development to work with HTTP
-              maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-             sameSite: 'lax',
-             domain: undefined, // Don't set domain in development
-             path: '/'
-            };
-            
-            res.cookie('token', token, cookieOptions);
-            console.log('[LOGIN] 🍪 Cookie set with options:', cookieOptions);
-            
-            // Return user data
-            const userData = {
-              id: row.id.toString(),
-              usuario: row.usuario,
-              nome: row.usuario, // For compatibility
-              name: row.usuario, // For compatibility  
-              setor: row.setor,
-              sector: row.setor, // For compatibility
-              role: row.role,
-              token: token
-            };
-            
-            console.log('[LOGIN] 📤 Sending success response');
-            res.json(userData);
-            
-          } catch (passwordError) {
-            console.error('[LOGIN] ❌ bcrypt.compare error:', passwordError.message);
-            return res.status(500).json({ error: 'Erro na verificação da senha' });
-          }
-        });
+        if (!row) {
+          console.log('[LOGIN] ❌ User not found:', usuarioClean);
+          return res.status(401).json({ error: 'Usuário ou senha inválidos' });
+        }
+        
+        console.log('[LOGIN] ✅ User found:', row.usuario);
+        
+        // Verify password
+        const isValidPassword = await bcrypt.compare(senhaClean, row.senha_hash);
+        
+        if (!isValidPassword) {
+          console.log('[LOGIN] ❌ Invalid password for user:', usuarioClean);
+          return res.status(401).json({ error: 'Usuário ou senha inválidos' });
+        }
+        
+        console.log('[LOGIN] ✅ Password verified successfully');
+        
+        // Generate JWT token
+        const tokenPayload = { 
+          id: row.id,
+          usuario: row.usuario, 
+          setor: row.setor,
+          role: row.role
+        };
+        
+        const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '7d' });
+        
+        // Set secure cookie
+        const cookieOptions = {
+          httpOnly: true,
+          secure: NODE_ENV === 'production',
+          maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+          sameSite: 'lax',
+          path: '/'
+        };
+        
+        res.cookie('token', token, cookieOptions);
+        console.log('[LOGIN] 🍪 Cookie set successfully');
+        
+        // Return user data
+        const userData = {
+          id: row.id.toString(),
+          usuario: row.usuario,
+          nome: row.nome || row.usuario,
+          name: row.nome || row.usuario,
+          email: row.email || `${row.usuario}@grupocropfield.com.br`,
+          setor: row.setor,
+          sector: row.setor,
+          role: row.role,
+          token: token
+        };
+        
+        console.log('[LOGIN] ✅ Login successful for:', row.usuario);
+        res.status(200).json(userData);
         
       } catch (error) {
-        console.error('[LOGIN] ❌ General login error:', error.message);
+        console.error('[LOGIN] ❌ Login error:', error.message);
         res.status(500).json({ error: 'Erro interno do servidor' });
       }
     });
@@ -345,12 +196,12 @@ async function startServer() {
         usuario: req.user.usuario,
         nome: req.user.usuario,
         name: req.user.usuario,
+        email: `${req.user.usuario}@grupocropfield.com.br`,
         setor: req.user.setor,
         sector: req.user.setor,
         role: req.user.role
       };
       
-      console.log('[ME] 📤 Returning user data');
       res.json(userData);
     });
 
@@ -361,344 +212,506 @@ async function startServer() {
       res.json({ success: true, message: 'Logout realizado com sucesso' });
     });
 
-    // Test endpoint to check database
-    app.get('/api/test-users', (req, res) => {
-      console.log('[TEST] 📋 Listing all users...');
-      
-      db.all("SELECT id, usuario, setor, role, created_at FROM usuarios", [], (err, rows) => {
-        if (err) {
-          console.error('[TEST] ❌ Error querying users:', err.message);
-          return res.status(500).json({ error: err.message });
+    // ===== USERS API =====
+    
+    app.get('/api/usuarios', auth, async (req, res) => {
+      try {
+        console.log('[USUARIOS] 📋 Loading all users');
+        
+        const users = await all(`
+          SELECT id, usuario, setor, role, nome, email, created_at, updated_at
+          FROM usuarios 
+          ORDER BY created_at DESC
+        `);
+        
+        console.log('[USUARIOS] ✅ Found', users.length, 'users');
+        res.json({ users });
+        
+      } catch (error) {
+        console.error('[USUARIOS] ❌ Error loading users:', error.message);
+        res.status(500).json({ error: 'Erro ao carregar usuários' });
+      }
+    });
+
+    // ===== TI/EQUIPAMENTOS API =====
+    
+    app.post('/api/ti/solicitacoes', auth, async (req, res) => {
+      try {
+        console.log('[TI] ➕ Creating TI request');
+        const { titulo, descricao, prioridade, email, nome } = req.body;
+        
+        // Validate required fields
+        if (!titulo || !descricao || !prioridade) {
+          return res.status(400).json({ 
+            error: 'Campos obrigatórios: titulo, descricao, prioridade' 
+          });
         }
         
-        console.log('[TEST] 📊 Found users:', rows?.length || 0);
-        res.json({ users: rows || [], count: rows?.length || 0 });
-      });
-    });
-
-    // Test password verification endpoint (development only)
-    if (NODE_ENV === 'development') {
-      app.post('/api/test-password', async (req, res) => {
-        try {
-          const { usuario, senha } = req.body;
-          
-          if (!usuario || !senha) {
-            return res.status(400).json({ error: 'Usuario and senha required' });
-          }
-          
-          db.get("SELECT * FROM usuarios WHERE usuario = ?", [usuario], async (err, row) => {
-            if (err) {
-              return res.status(500).json({ error: err.message });
-            }
-            
-            if (!row) {
-              return res.status(404).json({ error: 'User not found' });
-            }
-            
-            const isValid = await bcrypt.compare(senha, row.senha_hash);
-            
-            res.json({
-              usuario: row.usuario,
-              hashPreview: row.senha_hash.substring(0, 20) + '...',
-              passwordProvided: senha.substring(0, 3) + '***',
-              isValid: isValid,
-              role: row.role,
-              setor: row.setor
-            });
+        // Validate prioridade
+        const validPriorities = ['baixa', 'media', 'alta'];
+        if (!validPriorities.includes(prioridade)) {
+          return res.status(400).json({ 
+            error: 'Prioridade deve ser: baixa, media ou alta' 
           });
-          
-        } catch (error) {
-          res.status(500).json({ error: error.message });
         }
-      });
-    }
-
-    // Admin dashboard (protected route)
-    app.get('/api/admin/dashboard', auth, (req, res) => {
-      console.log('[ADMIN] 📊 Dashboard access by:', req.user?.usuario);
-      
-      if (req.user.role !== 'admin') {
-        console.log('[ADMIN] ❌ Access denied, role:', req.user.role);
-        return res.status(403).json({ error: 'Acesso negado - apenas administradores' });
+        
+        const result = await tx(async () => {
+          return await run(`
+            INSERT INTO solicitacoes_ti 
+            (solicitante_nome, solicitante_email, equipamento, descricao, prioridade) 
+            VALUES (?, ?, ?, ?, ?)
+          `, [
+            nome || req.user.usuario,
+            email || null, // Allow NULL email
+            titulo,
+            descricao,
+            prioridade
+          ]);
+        });
+        
+        console.log('[TI] ✅ TI request created with ID:', result.lastID);
+        res.status(201).json({ 
+          success: true, 
+          id: result.lastID,
+          message: 'Solicitação criada com sucesso' 
+        });
+        
+      } catch (error) {
+        console.error('[TI] ❌ Error creating request:', error.message);
+        res.status(500).json({ error: 'Erro ao criar solicitação' });
       }
-      
-      res.json({
-        message: 'Dashboard acessado com sucesso',
-        user: req.user,
-        stats: {
-          usuarios_ativos: 2,
-          posts_mural: 0,
-          reservas_salas: 0,
-          solicitacoes_ti: 0,
-          trocas_proteina: 0,
-          agendamentos_portaria: 0
+    });
+
+    app.get('/api/ti/solicitacoes', auth, async (req, res) => {
+      try {
+        console.log('[TI] 📋 Loading TI requests');
+        
+        const requests = await all(`
+          SELECT id, solicitante_nome, solicitante_email, equipamento, descricao, 
+                 prioridade, status, created_at, updated_at
+          FROM solicitacoes_ti 
+          ORDER BY created_at DESC
+        `);
+        
+        console.log('[TI] ✅ Found', requests.length, 'TI requests');
+        res.json({ solicitacoes: requests });
+        
+      } catch (error) {
+        console.error('[TI] ❌ Error loading requests:', error.message);
+        res.status(500).json({ error: 'Erro ao carregar solicitações' });
+      }
+    });
+
+    // ===== MURAL API =====
+    
+    app.post('/api/mural/posts', auth, async (req, res) => {
+      try {
+        console.log('[MURAL] ➕ Creating post');
+        const { titulo, conteudo, pinned } = req.body;
+        
+        if (!titulo || !conteudo) {
+          return res.status(400).json({ 
+            error: 'Título e conteúdo são obrigatórios' 
+          });
         }
-      });
+        
+        const result = await tx(async () => {
+          return await run(`
+            INSERT INTO mural_posts 
+            (autor_usuario, autor_setor, titulo, conteudo, publicado) 
+            VALUES (?, ?, ?, ?, ?)
+          `, [
+            req.user.usuario,
+            req.user.setor,
+            titulo,
+            conteudo,
+            pinned ? 1 : 1 // All posts published for now
+          ]);
+        });
+        
+        console.log('[MURAL] ✅ Post created with ID:', result.lastID);
+        res.status(201).json({ 
+          success: true, 
+          id: result.lastID,
+          message: 'Post criado com sucesso' 
+        });
+        
+      } catch (error) {
+        console.error('[MURAL] ❌ Error creating post:', error.message);
+        res.status(500).json({ error: 'Erro ao criar post' });
+      }
     });
 
-    // ===== MURAL API ROUTES =====
-    
-    console.log('📄 Registering Mural API routes...');
-    
-    // Get all posts
-    app.get('/api/mural/posts', auth, (req, res) => {
-      console.log('[MURAL] 📄 Loading posts for user:', req.user?.usuario);
-      res.json([]);
+    app.get('/api/mural/posts', auth, async (req, res) => {
+      try {
+        console.log('[MURAL] 📄 Loading posts');
+        
+        const posts = await all(`
+          SELECT id, autor_usuario as author, titulo, conteudo, 
+                 publicado, created_at, updated_at,
+                 0 as likes_count, 0 as comments_count, 0 as pinned
+          FROM mural_posts 
+          WHERE publicado = 1
+          ORDER BY created_at DESC
+        `);
+        
+        console.log('[MURAL] ✅ Found', posts.length, 'posts');
+        res.json({ posts });
+        
+      } catch (error) {
+        console.error('[MURAL] ❌ Error loading posts:', error.message);
+        res.status(500).json({ error: 'Erro ao carregar posts' });
+      }
     });
 
-    // Create new post
-    app.post('/api/mural/posts', auth, (req, res) => {
-      console.log('[MURAL] ➕ Creating new post by user:', req.user?.usuario);
-      res.json({ success: true, message: 'Post criado com sucesso' });
-    });
-
-    // Like/unlike post
+    // Mural post interactions (placeholders for now)
     app.post('/api/mural/:postId/like', auth, (req, res) => {
-      console.log('[MURAL] ❤️ Like/unlike post:', req.params.postId, 'by user:', req.user?.usuario);
-      res.json({ success: true, liked: true });
+      console.log('[MURAL] ❤️ Like/unlike post:', req.params.postId);
+      res.json({ success: true, action: 'liked' });
     });
 
-    // Get post comments
     app.get('/api/mural/:postId/comments', auth, (req, res) => {
       console.log('[MURAL] 💬 Loading comments for post:', req.params.postId);
-      res.json([]);
+      res.json({ comments: [] });
     });
 
-    // Add comment to post
     app.post('/api/mural/:postId/comments', auth, (req, res) => {
-      console.log('[MURAL] ➕ Adding comment to post:', req.params.postId, 'by user:', req.user?.usuario);
-      res.json({ success: true, message: 'Comentário adicionado com sucesso' });
+      console.log('[MURAL] ➕ Adding comment to post:', req.params.postId);
+      res.json({ success: true, message: 'Comentário adicionado' });
     });
 
-    // Delete comment
     app.delete('/api/mural/comments/:commentId', auth, (req, res) => {
-      console.log('[MURAL] 🗑️ Deleting comment:', req.params.commentId, 'by user:', req.user?.usuario);
-      res.json({ success: true, message: 'Comentário removido com sucesso' });
+      console.log('[MURAL] 🗑️ Deleting comment:', req.params.commentId);
+      res.json({ success: true, message: 'Comentário removido' });
     });
 
-    // ===== EQUIPAMENTOS/TI API ROUTES =====
+    // ===== SALAS/RESERVAS API =====
     
-    console.log('🔧 Registering TI/Equipamentos API routes...');
+    app.post('/api/salas/agendar', auth, async (req, res) => {
+      try {
+        console.log('[SALAS] ➕ Creating room reservation');
+        const { sala_id, titulo, descricao, inicio, fim } = req.body;
+        
+        if (!sala_id || !titulo || !inicio || !fim) {
+          return res.status(400).json({ 
+            error: 'Campos obrigatórios: sala_id, titulo, inicio, fim' 
+          });
+        }
+        
+        // Validate datetime formats
+        if (!Date.parse(inicio) || !Date.parse(fim)) {
+          return res.status(400).json({ 
+            error: 'Formato de data/hora inválido para inicio ou fim' 
+          });
+        }
+        
+        const result = await tx(async () => {
+          return await run(`
+            INSERT INTO agendamentos_salas 
+            (sala_id, titulo, descricao, inicio, fim, reservado_por) 
+            VALUES (?, ?, ?, ?, ?, ?)
+          `, [
+            sala_id,
+            titulo,
+            descricao || null,
+            inicio,
+            fim,
+            req.user.usuario
+          ]);
+        });
+        
+        console.log('[SALAS] ✅ Room reservation created with ID:', result.lastID);
+        res.status(201).json({ 
+          success: true, 
+          id: result.lastID,
+          message: 'Reserva criada com sucesso',
+          points: 8
+        });
+        
+      } catch (error) {
+        console.error('[SALAS] ❌ Error creating reservation:', error.message);
+        res.status(500).json({ error: 'Erro ao criar reserva' });
+      }
+    });
+
+    app.get('/api/salas/agendados', auth, async (req, res) => {
+      try {
+        console.log('[SALAS] 📅 Loading room reservations');
+        
+        const reservations = await all(`
+          SELECT id, sala_id, titulo, descricao, inicio, fim, 
+                 reservado_por, created_at, updated_at
+          FROM agendamentos_salas 
+          ORDER BY inicio ASC
+        `);
+        
+        console.log('[SALAS] ✅ Found', reservations.length, 'room reservations');
+        res.json({ agendamentos: reservations });
+        
+      } catch (error) {
+        console.error('[SALAS] ❌ Error loading reservations:', error.message);
+        res.status(500).json({ error: 'Erro ao carregar reservas' });
+      }
+    });
+
+    // ===== PORTARIA API =====
     
-    // Get all TI requests (for admins/TI users)
-    app.get('/api/ti/solicitacoes', auth, (req, res) => {
-      console.log('[TI] 📋 Loading TI requests for user:', req.user?.usuario, 'role:', req.user?.role);
-      res.json([]);
+    app.post('/api/portaria/agendar', auth, async (req, res) => {
+      try {
+        console.log('[PORTARIA] ➕ Creating reception appointment');
+        const { visitante_nome, documento, empresa, data_hora, observacoes } = req.body;
+        
+        if (!visitante_nome || !data_hora) {
+          return res.status(400).json({ 
+            error: 'Campos obrigatórios: visitante_nome, data_hora' 
+          });
+        }
+        
+        // Validate datetime format
+        if (!Date.parse(data_hora)) {
+          return res.status(400).json({ 
+            error: 'Formato de data/hora inválido' 
+          });
+        }
+        
+        const result = await tx(async () => {
+          return await run(`
+            INSERT INTO agendamentos_portaria 
+            (visitante_nome, documento, empresa, data_hora, anfitriao, observacoes) 
+            VALUES (?, ?, ?, ?, ?, ?)
+          `, [
+            visitante_nome,
+            documento || null,
+            empresa || null,
+            data_hora,
+            req.user.usuario,
+            observacoes || null
+          ]);
+        });
+        
+        console.log('[PORTARIA] ✅ Reception appointment created with ID:', result.lastID);
+        res.status(201).json({ 
+          success: true, 
+          id: result.lastID,
+          message: 'Agendamento criado com sucesso',
+          points: 6
+        });
+        
+      } catch (error) {
+        console.error('[PORTARIA] ❌ Error creating appointment:', error.message);
+        res.status(500).json({ error: 'Erro ao criar agendamento' });
+      }
     });
 
-    // Get user's own TI requests
-    app.get('/api/ti/minhas', auth, (req, res) => {
-      console.log('[TI] 📋 Loading user TI requests for:', req.user?.usuario);
-      res.json([]);
+    app.get('/api/portaria/agendados', auth, async (req, res) => {
+      try {
+        console.log('[PORTARIA] 📅 Loading reception appointments');
+        
+        const appointments = await all(`
+          SELECT id, visitante_nome, documento, empresa, data_hora, 
+                 anfitriao, observacoes, created_at, updated_at
+          FROM agendamentos_portaria 
+          ORDER BY data_hora ASC
+        `);
+        
+        console.log('[PORTARIA] ✅ Found', appointments.length, 'reception appointments');
+        res.json({ agendamentos: appointments });
+        
+      } catch (error) {
+        console.error('[PORTARIA] ❌ Error loading appointments:', error.message);
+        res.status(500).json({ error: 'Erro ao carregar agendamentos' });
+      }
     });
 
-    // Create new TI request
-    app.post('/api/ti/solicitacoes', auth, (req, res) => {
-      console.log('[TI] ➕ Creating TI request by user:', req.user?.usuario);
-      res.json({ success: true, message: 'Solicitação criada com sucesso' });
-    });
-    // Google OAuth placeholders (for compatibility)
-   // ===== ADMIN EXPORT API ROUTES =====
-   
-   console.log('📊 Registering Admin Export API routes...');
-   
-   // Export users ranking
-   app.get('/api/admin/export/users/:format', auth, (req, res) => {
-     console.log('[ADMIN-EXPORT] 📊 Export users request:', req.params.format, 'by user:', req.user?.usuario);
-     
-     if (req.user.role !== 'admin') {
-       return res.status(403).json({ error: 'Acesso negado - apenas administradores' });
-     }
-     
-     const { format } = req.params;
-     const month = req.query.month || new Date().toISOString().slice(0, 7);
-     
-     if (format === 'csv') {
-       const csvData = `Nome,Email,Setor,Role,Pontos,Criado em
-admin-ti,admin-ti@cropfield.com,TI,admin,100,2025-01-01
-admin-rh,admin-rh@cropfield.com,RH,admin,95,2025-01-01`;
-       
-       res.setHeader('Content-Type', 'text/csv');
-       res.setHeader('Content-Disposition', `attachment; filename="usuarios-${month}.csv"`);
-       res.send(csvData);
-     } else {
-       res.json({
-         success: true,
-         format: format,
-         month: month,
-         data: [
-           { nome: 'admin-ti', email: 'admin-ti@cropfield.com', setor: 'TI', role: 'admin', pontos: 100 },
-           { nome: 'admin-rh', email: 'admin-rh@cropfield.com', setor: 'RH', role: 'admin', pontos: 95 }
-         ]
-       });
-     }
-   });
-   
-   // Export activities
-   app.get('/api/admin/export/activities/:format', auth, (req, res) => {
-     console.log('[ADMIN-EXPORT] 📋 Export activities request:', req.params.format);
-     
-     if (req.user.role !== 'admin') {
-       return res.status(403).json({ error: 'Acesso negado - apenas administradores' });
-     }
-     
-     const { format } = req.params;
-     const month = req.query.month || new Date().toISOString().slice(0, 7);
-     
-     if (format === 'csv') {
-       const csvData = `Usuário,Atividade,Data,Pontos
-admin-ti,Login realizado,2025-01-01,5
-admin-rh,Post criado,2025-01-01,10`;
-       
-       res.setHeader('Content-Type', 'text/csv');
-       res.setHeader('Content-Disposition', `attachment; filename="atividades-${month}.csv"`);
-       res.send(csvData);
-     } else {
-       res.json({
-         success: true,
-         format: format,
-         month: month,
-         data: [
-           { usuario: 'admin-ti', atividade: 'Login realizado', data: '2025-01-01', pontos: 5 },
-           { usuario: 'admin-rh', atividade: 'Post criado', data: '2025-01-01', pontos: 10 }
-         ]
-       });
-     }
-   });
-   
-   // Export protein exchanges
-   app.get('/api/admin/export/trocas_proteina/:format', auth, (req, res) => {
-     console.log('[ADMIN-EXPORT] 🥩 Export protein exchanges:', req.params.format);
-     
-     if (req.user.role !== 'admin') {
-       return res.status(403).json({ error: 'Acesso negado - apenas administradores' });
-     }
-     
-     const { format } = req.params;
-     
-     if (format === 'csv') {
-       const csvData = `Oferece,Busca,Status,Data
-admin-ti,Frango,Carne,Ativo,2025-01-01
-admin-rh,Peixe,Frango,Concluído,2025-01-01`;
-       
-       res.setHeader('Content-Type', 'text/csv');
-       res.setHeader('Content-Disposition', `attachment; filename="trocas-proteina.csv"`);
-       res.send(csvData);
-     } else {
-       res.json({
-         success: true,
-         format: format,
-         data: [
-           { oferece: 'Frango', busca: 'Carne', status: 'Ativo', data: '2025-01-01' },
-           { oferece: 'Peixe', busca: 'Frango', status: 'Concluído', data: '2025-01-01' }
-         ]
-       });
-     }
-   });
-   
-   // Export TI requests
-   app.get('/api/admin/export/ti_solicitacoes/:format', auth, (req, res) => {
-     console.log('[ADMIN-EXPORT] 🔧 Export TI requests:', req.params.format);
-     
-     if (req.user.role !== 'admin') {
-       return res.status(403).json({ error: 'Acesso negado - apenas administradores' });
-     }
-     
-     const { format } = req.params;
-     
-     if (format === 'csv') {
-       const csvData = `Usuário,Equipamento,Status,Prioridade,Data
-admin-ti,Notebook,Aprovado,Alta,2025-01-01
-admin-rh,Mouse,Pendente,Média,2025-01-01`;
-       
-       res.setHeader('Content-Type', 'text/csv');
-       res.setHeader('Content-Disposition', `attachment; filename="solicitacoes-ti.csv"`);
-       res.send(csvData);
-     } else {
-       res.json({
-         success: true,
-         format: format,
-         data: [
-           { usuario: 'admin-ti', equipamento: 'Notebook', status: 'Aprovado', prioridade: 'Alta', data: '2025-01-01' },
-           { usuario: 'admin-rh', equipamento: 'Mouse', status: 'Pendente', prioridade: 'Média', data: '2025-01-01' }
-         ]
-       });
-     }
-   });
-   
-   // Export room reservations
-   app.get('/api/admin/export/reservas/:format', auth, (req, res) => {
-     console.log('[ADMIN-EXPORT] 🏢 Export room reservations:', req.params.format);
-     
-     if (req.user.role !== 'admin') {
-       return res.status(403).json({ error: 'Acesso negado - apenas administradores' });
-     }
-     
-     const { format } = req.params;
-     
-     if (format === 'csv') {
-       const csvData = `Usuário,Sala,Data,Horário,Status
-admin-ti,Sala de Reunião 1,2025-01-15,09:00-10:00,Confirmado
-admin-rh,Auditório,2025-01-16,14:00-16:00,Pendente`;
-       
-       res.setHeader('Content-Type', 'text/csv');
-       res.setHeader('Content-Disposition', `attachment; filename="reservas-salas.csv"`);
-       res.send(csvData);
-     } else {
-       res.json({
-         success: true,
-         format: format,
-         data: [
-           { usuario: 'admin-ti', sala: 'Sala de Reunião 1', data: '2025-01-15', horario: '09:00-10:00', status: 'Confirmado' },
-           { usuario: 'admin-rh', sala: 'Auditório', data: '2025-01-16', horario: '14:00-16:00', status: 'Pendente' }
-         ]
-       });
-     }
-   });
-   
-   // Full system backup
-   app.get('/api/admin/export/full-backup/:format', auth, (req, res) => {
-     console.log('[ADMIN-EXPORT] 💾 Full backup request:', req.params.format);
-     
-     if (req.user.role !== 'admin') {
-       return res.status(403).json({ error: 'Acesso negado - apenas administradores' });
-     }
-     
-     const { format } = req.params;
-     
-     if (format === 'json') {
-       const backupData = {
-         timestamp: new Date().toISOString(),
-         version: '1.0.0',
-         data: {
-           usuarios: [
-             { id: 1, usuario: 'admin-ti', setor: 'TI', role: 'admin' },
-             { id: 2, usuario: 'admin-rh', setor: 'RH', role: 'admin' }
-           ],
-           posts: [],
-           solicitacoes_ti: [],
-           trocas_proteina: [],
-           reservas: []
-         }
-       };
-       
-       res.json(backupData);
-     } else {
-       res.json({
-         success: true,
-         message: `Backup ${format.toUpperCase()} processado com sucesso`,
-         timestamp: new Date().toISOString()
-       });
-     }
-   });
-    app.get('/auth/google', (req, res) => {
-      console.log('[GOOGLE] 🔗 Google OAuth requested (not implemented)');
-      res.redirect('/login?error=google_not_configured');
+    // ===== COMPATIBILITY ROUTES (for existing frontend) =====
+    
+    // Legacy routes for compatibility
+    app.get('/api/reservas', auth, async (req, res) => {
+      try {
+        const reservations = await all(`
+          SELECT id, sala_id as sala, titulo as assunto, inicio, fim, 
+                 reservado_por as responsavel, 
+                 substr(inicio, 1, 10) as data
+          FROM agendamentos_salas 
+          ORDER BY inicio ASC
+        `);
+        
+        res.json({ reservas: reservations });
+      } catch (error) {
+        res.status(500).json({ error: 'Erro ao carregar reservas' });
+      }
     });
 
-    app.get('/auth/google/callback', (req, res) => {
-      console.log('[GOOGLE] 🔗 Google OAuth callback (not implemented)');
-      res.redirect('/login?error=google_not_configured');
+    app.post('/api/reservas', auth, async (req, res) => {
+      try {
+        const { sala, data, inicio, fim, assunto } = req.body;
+        
+        if (!sala || !data || !inicio || !fim || !assunto) {
+          return res.status(400).json({ error: 'Todos os campos são obrigatórios' });
+        }
+        
+        const inicioDateTime = `${data}T${inicio}`;
+        const fimDateTime = `${data}T${fim}`;
+        
+        const result = await tx(async () => {
+          return await run(`
+            INSERT INTO agendamentos_salas 
+            (sala_id, titulo, inicio, fim, reservado_por) 
+            VALUES (?, ?, ?, ?, ?)
+          `, [sala, assunto, inicioDateTime, fimDateTime, req.user.usuario]);
+        });
+        
+        res.status(201).json({ 
+          success: true, 
+          id: result.lastID,
+          points: 8
+        });
+        
+      } catch (error) {
+        console.error('[RESERVAS] ❌ Error:', error.message);
+        res.status(500).json({ error: 'Erro ao criar reserva' });
+      }
+    });
+
+    app.get('/api/portaria/agendamentos', auth, async (req, res) => {
+      try {
+        const appointments = await all(`
+          SELECT visitante_nome as visitante, documento, empresa,
+                 substr(data_hora, 1, 10) as data,
+                 substr(data_hora, 12, 5) as hora,
+                 anfitriao, observacoes as observacao
+          FROM agendamentos_portaria 
+          ORDER BY data_hora ASC
+        `);
+        
+        res.json({ agendamentos: appointments });
+      } catch (error) {
+        res.status(500).json({ error: 'Erro ao carregar agendamentos' });
+      }
+    });
+
+    app.post('/api/portaria/agendamentos', auth, async (req, res) => {
+      try {
+        const { data, hora, visitante, documento, observacao } = req.body;
+        
+        if (!data || !hora || !visitante) {
+          return res.status(400).json({ error: 'Data, hora e nome do visitante são obrigatórios' });
+        }
+        
+        const dataHora = `${data}T${hora}:00`;
+        
+        const result = await tx(async () => {
+          return await run(`
+            INSERT INTO agendamentos_portaria 
+            (visitante_nome, documento, data_hora, anfitriao, observacoes) 
+            VALUES (?, ?, ?, ?, ?)
+          `, [visitante, documento || null, dataHora, req.user.usuario, observacao || null]);
+        });
+        
+        res.status(201).json({ 
+          success: true, 
+          id: result.lastID,
+          points: 6
+        });
+        
+      } catch (error) {
+        console.error('[PORTARIA] ❌ Error:', error.message);
+        res.status(500).json({ error: 'Erro ao criar agendamento' });
+      }
+    });
+
+    // ===== ADMIN ROUTES =====
+    
+    app.get('/api/admin/dashboard', auth, async (req, res) => {
+      try {
+        if (req.user.role !== 'admin') {
+          return res.status(403).json({ error: 'Acesso negado - apenas administradores' });
+        }
+        
+        console.log('[ADMIN] 📊 Loading dashboard data');
+        
+        // Get counts from all tables
+        const [usuarios, solicitacoes, posts, salas, portaria] = await Promise.all([
+          get('SELECT COUNT(*) as count FROM usuarios'),
+          get('SELECT COUNT(*) as count FROM solicitacoes_ti'),
+          get('SELECT COUNT(*) as count FROM mural_posts WHERE publicado = 1'),
+          get('SELECT COUNT(*) as count FROM agendamentos_salas'),
+          get('SELECT COUNT(*) as count FROM agendamentos_portaria')
+        ]);
+        
+        const stats = {
+          usuarios_ativos: usuarios.count,
+          posts_mural: posts.count,
+          reservas_salas: salas.count,
+          solicitacoes_ti: solicitacoes.count,
+          trocas_proteina: 0, // Not implemented yet
+          agendamentos_portaria: portaria.count
+        };
+        
+        res.json({ 
+          stats,
+          userPoints: 0,
+          breakdown: [],
+          ranking: []
+        });
+        
+      } catch (error) {
+        console.error('[ADMIN] ❌ Dashboard error:', error.message);
+        res.status(500).json({ error: 'Erro ao carregar dashboard' });
+      }
+    });
+
+    // Admin export endpoints (with sample data)
+    const exportRoutes = [
+      'users', 'activities', 'trocas_proteina', 'ti_solicitacoes', 'reservas', 'full-backup'
+    ];
+    
+    exportRoutes.forEach(routeName => {
+      app.get(`/api/admin/export/${routeName}/:format`, auth, (req, res) => {
+        if (req.user.role !== 'admin') {
+          return res.status(403).json({ error: 'Acesso negado - apenas administradores' });
+        }
+        
+        console.log(`[ADMIN-EXPORT] 📊 Export ${routeName} as ${req.params.format}`);
+        
+        const { format } = req.params;
+        const month = req.query.month || new Date().toISOString().slice(0, 7);
+        
+        if (format === 'csv') {
+          const csvData = `Sample,Data,For,${routeName.toUpperCase()}
+admin-ti,TI,admin,100
+admin-rh,RH,admin,95`;
+          
+          res.setHeader('Content-Type', 'text/csv;charset=utf-8');
+          res.setHeader('Content-Disposition', `attachment; filename="${routeName}-${month}.csv"`);
+          res.send(csvData);
+        } else {
+          res.json({
+            success: true,
+            format: format,
+            month: month,
+            data: [
+              { name: 'admin-ti', value: 100 },
+              { name: 'admin-rh', value: 95 }
+            ]
+          });
+        }
+      });
+    });
+
+    // ===== ERROR HANDLING =====
+    
+    // Global error handler
+    app.use((err, req, res, next) => {
+      console.error('❌ Unhandled server error:', err.message);
+      console.error('   Stack:', err.stack);
+      res.status(500).json({ error: 'Erro interno do servidor' });
+    });
+
+    // 404 handler for API routes
+    app.use('/api/*', (req, res) => {
+      console.log('[404] 🚫 API endpoint not found:', req.originalUrl);
+      res.status(404).json({ error: `Endpoint não encontrado: ${req.originalUrl}` });
     });
 
     // Serve static files in production
@@ -707,7 +720,6 @@ admin-rh,Auditório,2025-01-16,14:00-16:00,Pendente`;
       if (fs.existsSync(buildPath)) {
         app.use(express.static(buildPath));
         
-        // Catch-all for SPA routing
         app.get('*', (req, res) => {
           const indexPath = path.join(buildPath, 'index.html');
           if (fs.existsSync(indexPath)) {
@@ -719,48 +731,41 @@ admin-rh,Auditório,2025-01-16,14:00-16:00,Pendente`;
       }
     }
 
-    // Error handling middleware
-    app.use((err, req, res, next) => {
-      console.error('❌ Server error:', err.message);
-      res.status(500).json({ error: 'Erro interno do servidor' });
-    });
-
-    // 404 handler for API routes only
-    app.use('/api/*', (req, res) => {
-      console.log('[404] 🚫 API endpoint not found:', req.originalUrl);
-      res.status(404).json({ error: `Endpoint não encontrado: ${req.originalUrl}` });
-    });
-
     // Start server
     const server = app.listen(PORT, '0.0.0.0', () => {
       console.log('🎉 SERVER READY!');
       console.log(`✅ Backend running on http://localhost:${PORT}`);
       console.log(`🌐 Environment: ${NODE_ENV}`);
-      console.log(`🗄️  Database: ${dbPath}`);
       console.log('');
       console.log('📋 Available API endpoints:');
-      console.log('   GET  /api/health           - Health check');
-      console.log('   POST /api/login-admin      - Manual admin login');
-      console.log('   GET  /api/me               - Current user (protected)');
-      console.log('   POST /api/logout           - Logout');
-      console.log('   GET  /api/test-users       - List users (dev)');
-      if (NODE_ENV === 'development') {
-        console.log('   POST /api/test-password    - Test password (dev only)');
-      }
-      console.log('   GET  /auth/google          - Google OAuth (placeholder)');
-      console.log('   GET  /auth/google/callback - Google callback (placeholder)');
+      console.log('   Authentication:');
+      console.log('     POST /api/login-admin      - Manual login');
+      console.log('     GET  /api/me               - Current user');
+      console.log('     POST /api/logout           - Logout');
+      console.log('   Data Management:');
+      console.log('     GET  /api/usuarios         - List users');
+      console.log('     POST /api/ti/solicitacoes  - Create TI request');
+      console.log('     GET  /api/ti/solicitacoes  - List TI requests');
+      console.log('     POST /api/mural/posts      - Create post');
+      console.log('     GET  /api/mural/posts      - List posts');
+      console.log('     POST /api/salas/agendar    - Create room reservation');
+      console.log('     GET  /api/salas/agendados  - List room reservations');
+      console.log('     POST /api/portaria/agendar - Create reception appointment');
+      console.log('     GET  /api/portaria/agendados - List reception appointments');
+      console.log('   Admin:');
+      console.log('     GET  /api/admin/dashboard  - Admin dashboard');
+      console.log('     GET  /api/admin/export/*   - Export data');
       console.log('');
       console.log('🔑 Test credentials:');
       console.log('   admin-ti / admin123 (TI Admin)');
       console.log('   admin-rh / admin123 (RH Admin)');
       console.log('');
-      console.log('🚀 Ready for frontend connections!');
+      console.log('🚀 Ready for connections!');
     });
     
     server.on('error', (error) => {
       if (error.code === 'EADDRINUSE') {
         console.error(`❌ Port ${PORT} is already in use`);
-        console.error('💡 Try: killall node OR set different PORT');
       } else {
         console.error('❌ Server error:', error.message);
       }
@@ -771,17 +776,10 @@ admin-rh,Auditório,2025-01-16,14:00-16:00,Pendente`;
     const gracefulShutdown = (signal) => {
       console.log(`\n🛑 ${signal} received, shutting down gracefully...`);
       
-      server.close(() => {
+      server.close(async () => {
         console.log('✅ HTTP server closed');
-        
-        db.close((err) => {
-          if (err) {
-            console.error('❌ Error closing database:', err.message);
-          } else {
-            console.log('✅ Database connection closed');
-          }
-          process.exit(0);
-        });
+        await closeDb();
+        process.exit(0);
       });
     };
 
@@ -789,13 +787,13 @@ admin-rh,Auditório,2025-01-16,14:00-16:00,Pendente`;
     process.on('SIGINT', () => gracefulShutdown('SIGINT'));
     
   } catch (error) {
-    console.error('❌ Failed to initialize server:', error.message);
+    console.error('❌ Failed to start server:', error.message);
     process.exit(1);
   }
 }
 
 // Start the server
 startServer().catch(error => {
-  console.error('❌ Critical error starting server:', error);
+  console.error('❌ Critical startup error:', error);
   process.exit(1);
 });

@@ -128,7 +128,6 @@ const Equipamentos: React.FC = () => {
 
       const url = `${BASE_API}${path}`;
       const response = await fetch(url, {
-        headers: getAuthHeadersWithJson(user),
         credentials: 'include', // <<< envia cookie 'token'
       });
 
@@ -188,12 +187,12 @@ const Equipamentos: React.FC = () => {
       const url = `${BASE_API}/api/ti/solicitacoes`;
       const res = await fetch(url, {
         method: 'POST',
-        headers: getAuthHeadersWithJson(user),
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include', // <<< envia cookie 'token'
         body: JSON.stringify({
           titulo: equipmentName,
           descricao: `Prioridade: ${formData.priority}\nJustificativa: ${formData.justification}`,
-          prioridade: formData.priority,
+          prioridade: formData.priority === 'low' ? 'baixa' : formData.priority === 'high' ? 'alta' : 'media',
           email: user.email,
           nome: (user as any)?.name || (user as any)?.nome || '',
         }),
