@@ -94,7 +94,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       const meUrl = `${API_BASE}/api/me`;
       console.log('[AUTH] Fetching user from:', meUrl);
       
-      const res = await fetch(meUrl, { 
+      const res = await fetch('/api/me', {  // Use relative path for Vite proxy
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
@@ -232,7 +232,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     try {
       console.log('[AUTH] Attempting manual login for usuario:', usuario);
       
-      const loginUrl = `${API_BASE}/api/login-admin`;
+      const loginUrl = '/api/login-admin'; // Use relative path for Vite proxy
       console.log('[AUTH] Login URL:', loginUrl);
       
       const response = await fetch(loginUrl, {

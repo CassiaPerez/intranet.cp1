@@ -50,7 +50,7 @@ export const LoginPage: React.FC = () => {
   const handleGoogleLogin = () => {
     console.log('[LOGIN] Iniciando login Google...');
     
-    const googleUrl = `${API_BASE || ''}/auth/google`;
+    const googleUrl = '/auth/google'; // Use relative path for Vite proxy
     console.log('[LOGIN] Redirecting to Google OAuth:', googleUrl);
     window.location.href = googleUrl;
   };
