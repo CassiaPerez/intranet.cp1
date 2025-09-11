@@ -415,25 +415,8 @@ try {
   });
 } catch (error) {
   console.error('❌ Failed to start server:', error);
-  process.exit(1);
-}
-    console.log('   admin-rh / admin123 (RH Admin)');
-    console.log('');
-    console.log('🚀 Backend ready for connections!');
-  });
-  
-  server.on('error', (error) => {
-    if (error.code === 'EADDRINUSE') {
-      console.error(`❌ Port ${PORT} is already in use`);
-      console.error('❌ Try: killall node OR use a different PORT');
-    } else {
-      console.error('❌ Server error:', error);
-    }
-    process.exit(1);
-  });
-} catch (error) {
-  console.error('❌ Failed to start server:', error);
-  process.exit(1);
+  console.error('❌ Try running: npm run clean:db');
+  setTimeout(() => process.exit(1), 1000);
 }
 
 // Graceful shutdown
