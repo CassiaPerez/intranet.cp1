@@ -187,6 +187,8 @@ async function startServer() {
 
     // ===== API ROUTES =====
 
+    console.log('🛠️  Registering API routes...');
+
     // Health check
     app.get('/api/health', (req, res) => {
       console.log('[HEALTH] ✅ Health check requested');
@@ -429,6 +431,8 @@ async function startServer() {
 
     // ===== MURAL API ROUTES =====
     
+    console.log('📄 Registering Mural API routes...');
+    
     // Get all posts
     app.get('/api/mural/posts', auth, (req, res) => {
       console.log('[MURAL] 📄 Loading posts for user:', req.user?.usuario);
@@ -466,6 +470,8 @@ async function startServer() {
     });
 
     // ===== EQUIPAMENTOS/TI API ROUTES =====
+    
+    console.log('🔧 Registering TI/Equipamentos API routes...');
     
     // Get all TI requests (for admins/TI users)
     app.get('/api/ti/solicitacoes', auth, (req, res) => {
