@@ -201,10 +201,10 @@ export const AdminPanel: React.FC = () => {
 
   const handleExport = async (formato: 'csv' | 'excel' | 'pdf') => {
     try {
-      console.log(`[ADMIN] Exporting ranking as ${formato}...`);
+      console.log(`[ADMIN] Exporting users as ${formato}...`);
       
       const currentMonth = new Date().toISOString().slice(0, 7);
-      const response = await fetch(`/api/admin/export/ranking/${formato}?month=${currentMonth}`, {
+      const response = await fetch(`/api/admin/export/users/${formato}?month=${currentMonth}`, {
         credentials: 'include'
       });
 
@@ -223,7 +223,7 @@ export const AdminPanel: React.FC = () => {
           link.click();
           document.body.removeChild(link);
           URL.revokeObjectURL(link.href);
-          toast.success('Ranking CSV baixado com sucesso!');
+          toast.success('Usuários CSV baixado com sucesso!');
         } else {
           const data = await response.json();
           console.log(`[ADMIN] Export data for ${formato}:`, data.data?.length, 'records');
@@ -823,7 +823,7 @@ const handleExportTrocas = async (formato: 'csv' | 'excel') => {
   try {
     console.log(`[ADMIN] Exporting protein exchanges as ${formato}...`);
     
-    const response = await fetch(`/api/admin/export/protein-exchanges/${formato}`, {
+    const response = await fetch(`/api/admin/export/trocas_proteina/${formato}`, {
       credentials: 'include'
     });
 
@@ -858,7 +858,7 @@ const handleExportEquipamentos = async (formato: 'csv' | 'excel') => {
   try {
     console.log(`[ADMIN] Exporting equipment requests as ${formato}...`);
     
-    const response = await fetch(`/api/admin/export/equipment/${formato}`, {
+    const response = await fetch(`/api/admin/export/ti_solicitacoes/${formato}`, {
       credentials: 'include'
     });
 
@@ -892,7 +892,7 @@ const handleExportReservas = async (formato: 'csv' | 'excel') => {
   try {
     console.log(`[ADMIN] Exporting room reservations as ${formato}...`);
     
-    const response = await fetch(`/api/admin/export/reservations/${formato}`, {
+    const response = await fetch(`/api/admin/export/reservas/${formato}`, {
       credentials: 'include'
     });
 

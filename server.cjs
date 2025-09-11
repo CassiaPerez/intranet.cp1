@@ -1067,7 +1067,7 @@ app.get('/api/admin/export/:type/:format', authenticateToken, requireAdminOrHRor
         filename = 'usuarios';
         break;
         
-      case 'reservations':
+      case 'reservas':
         // Get reservations data
         data = await new Promise((resolve, reject) => {
           db.all(`
@@ -1099,6 +1099,38 @@ app.get('/api/admin/export/:type/:format', authenticateToken, requireAdminOrHRor
           });
         });
         filename = 'posts-mural';
+        break;
+        
+      case 'trocas_proteina':
+        // Get protein exchanges data
+        data = await new Promise((resolve, reject) => {
+          db.all(`
+            SELECT tp.*, u.nome, u.email, u.setor
+            FROM trocas_proteina tp
+            JOIN usuarios u ON tp.usuario_id = u.id
+            ORDER BY tp.data DESC
+          `, (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows || []);
+          });
+        });
+        filename = 'trocas-proteina';
+        break;
+        
+      case 'ti_solicitacoes':
+        // Get TI requests data
+        data = await new Promise((resolve, reject) => {
+          db.all(`
+            SELECT ts.*, u.nome, u.email, u.setor
+            FROM ti_solicitacoes ts
+            JOIN usuarios u ON ts.usuario_id = u.id
+            ORDER BY ts.created_at DESC
+          `, (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows || []);
+          });
+        });
+        filename = 'solicitacoes-ti';
         break;
         
       default:

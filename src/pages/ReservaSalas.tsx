@@ -112,9 +112,9 @@ export const ReservaSalas: React.FC = () => {
     : events.filter(event => event.extendedProps.sala === selectedRoom);
 
   const handleDateClick = (selectInfo: any) => {
-    setSelectedDate(selectInfo.date);
-    const startTime = selectInfo.date.toISOString().slice(0, 16);
-    const endDate = new Date(selectInfo.date);
+    setSelectedDate(selectInfo.start);
+    const startTime = selectInfo.start.toISOString().slice(0, 16);
+    const endDate = new Date(selectInfo.start);
     endDate.setHours(endDate.getHours() + 1);
     const endTime = endDate.toISOString().slice(0, 16);
 
