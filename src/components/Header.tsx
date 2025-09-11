@@ -1,5 +1,16 @@
 import React from 'react';
 import { Bell, Search, LogOut } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { useGamification } from '../contexts/GamificationContext';
+import { ChatBot } from './ChatBot';
+import toast from 'react-hot-toast';
+
+export const Header: React.FC = () => {
+  const { user, logout } = useAuth();
+  const { userStats } = useGamification();
+
+  const handleLogout = async () => {
+    try {
       console.log('[HEADER] Initiating logout...');
       await logout();
       
@@ -7,15 +18,16 @@ import { Bell, Search, LogOut } from 'lucide-react';
       setTimeout(() => {
         window.location.href = '/login';
       }, 100);
-import { useGamification } from '../contexts/GamificationContext';
-
-export const Header: React.FC = () => {
+    } catch (error) {
+      console.error('[HEADER] Logout error:', error);
+      toast.error('Erro ao fazer logout');
+      
       // Even if logout fails, redirect to login
       setTimeout(() => {
         window.location.href = '/login';
       }, 100);
-  const { user, logout } = useAuth();
-  const { userStats } = useGamification();
+    }
+  };
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
@@ -41,12 +53,12 @@ export const Header: React.FC = () => {
 
           <div className="flex items-center space-x-3">
             <img
-              src={user?.avatar || 'https://images.pexels.com/photos/771742/pexels-photo-771742.jpeg?w=150'}
-              alt={user?.name || 'Usuário'}
+              src={user?.picture || user?.avatar || 'https://images.pexels.com/photos/771742/pexels-photo-771742.jpeg?w=150'}
+              alt={user?.name || user?.nome || 'Usuário'}
               className="w-8 h-8 rounded-full object-cover"
             />
             <div className="flex flex-col">
-              <span className="text-sm font-medium text-gray-700">{user?.name || 'Usuário'}</span>
+              <span className="text-sm font-medium text-gray-700">{user?.name || user?.nome || 'Usuário'}</span>
               <span className="text-xs text-gray-500">{userStats?.totalPoints || 0} pts • Nível {userStats?.level || 1}</span>
             </div>
           </div>
