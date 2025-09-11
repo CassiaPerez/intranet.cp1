@@ -19,9 +19,14 @@ console.log('JWT_SECRET configured:', !!JWT_SECRET);
 
 // Ensure data directory exists
 const dataDir = path.join(__dirname, 'data');
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
-  console.log('📁 Created data directory');
+try {
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+    console.log('📁 Created data directory');
+  }
+} catch (error) {
+  console.error('❌ Failed to create data directory:', error);
+  process.exit(1);
 }
 
 // Database setup
@@ -33,15 +38,19 @@ try {
   db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
       console.error('❌ Error opening database:', err.message);
-      process.exit(1);
+      console.error('❌ Database path:', dbPath);
+      console.error('❌ Try running: npm run clean:db');
+      setTimeout(() => process.exit(1), 1000);
     } else {
       console.log('✅ Connected to SQLite database');
+      console.log('📂 Database location:', dbPath);
       initializeDatabase();
     }
   });
 } catch (error) {
   console.error('❌ Failed to create database connection:', error);
-  process.exit(1);
+  console.error('❌ Try running: npm run clean:db');
+  setTimeout(() => process.exit(1), 1000);
 }
 
 // Initialize database and create admin users
@@ -373,23 +382,41 @@ app.use('/api/*', (req, res) => {
 });
 
 // Start server
-const server = app.listen(PORT, () => {
-  console.log(`✅ Server running on http://localhost:${PORT}`);
-  console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🗄️  Database: ${dbPath}`);
-  console.log('📋 Available endpoints:');
-  console.log('   GET  /api/health        - Health check');
-  console.log('   POST /api/login-admin   - Manual admin login');
-  console.log('   GET  /api/me            - Current user (protected)');
-  console.log('   POST /api/logout        - Logout');
-  console.log('   GET  /api/test-users    - List users (dev)');
-  console.log('   GET  /auth/google       - Google OAuth (placeholder)');
-  console.log('   GET  /auth/google/callback - Google callback (placeholder)');
-  console.log('');
-  console.log('🔑 Test credentials:');
-  console.log('   admin-ti / admin123 (TI Admin)');
-  console.log('   admin-rh / admin123 (RH Admin)');
-});
+let server;
+try {
+  server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`✅ Server running on http://localhost:${PORT}`);
+    console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🗄️  Database: ${dbPath}`);
+    console.log('📋 Available endpoints:');
+    console.log('   GET  /api/health        - Health check');
+    console.log('   POST /api/login-admin   - Manual admin login');
+    console.log('   GET  /api/me            - Current user (protected)');
+    console.log('   POST /api/logout        - Logout');
+    console.log('   GET  /api/test-users    - List users (dev)');
+    console.log('   GET  /auth/google       - Google OAuth (placeholder)');
+    console.log('   GET  /auth/google/callback - Google callback (placeholder)');
+    console.log('');
+    console.log('🔑 Test credentials:');
+    console.log('   admin-ti / admin123 (TI Admin)');
+    console.log('   admin-rh / admin123 (RH Admin)');
+    console.log('');
+    console.log('🚀 Backend ready for connections!');
+  });
+  
+  server.on('error', (error) => {
+    if (error.code === 'EADDRINUSE') {
+      console.error(`❌ Port ${PORT} is already in use`);
+      console.error('❌ Try: killall node OR use a different PORT');
+    } else {
+      console.error('❌ Server error:', error);
+    }
+    process.exit(1);
+  });
+} catch (error) {
+  console.error('❌ Failed to start server:', error);
+  process.exit(1);
+}
 
 // Graceful shutdown
 process.on('SIGTERM', () => {

@@ -7,6 +7,7 @@
     "dev": "concurrently \"npm run server\" \"vite\"",
     "dev:frontend": "vite",
     "server": "NODE_ENV=development PORT=3006 node server.cjs",
+    "clean:db": "rm -f data/database.sqlite",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "lint": "eslint ."
