@@ -20,7 +20,8 @@ function getDb() {
     const dbPath = path.join(dataDir, 'database.sqlite');
     console.log('🗄️  Connecting to database:', dbPath);
 
-    dbInstance = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
+    // Use synchronous database connection for reliability
+    dbInstance = new sqlite3.Database(dbPath, (err) => {
       if (err) {
         console.error('❌ Error opening database:', err.message);
         process.exit(1);
@@ -28,17 +29,16 @@ function getDb() {
       console.log('✅ Connected to SQLite database');
     });
 
-    // Configure SQLite with performance optimizations and WAL mode
+    // Configure SQLite immediately
     dbInstance.serialize(() => {
-      console.log('⚙️  Configuring SQLite PRAGMAs...');
+      console.log('⚙️  Configuring SQLite settings...');
       dbInstance.run('PRAGMA journal_mode = WAL');
       dbInstance.run('PRAGMA synchronous = NORMAL');
       dbInstance.run('PRAGMA foreign_keys = ON');
-      dbInstance.run('PRAGMA busy_timeout = 10000');
+      dbInstance.run('PRAGMA busy_timeout = 30000'); // 30 seconds
       dbInstance.run('PRAGMA cache_size = -64000');
       dbInstance.run('PRAGMA temp_store = MEMORY');
-      dbInstance.run('PRAGMA auto_vacuum = INCREMENTAL');
-      console.log('✅ SQLite PRAGMAs configured');
+      console.log('✅ SQLite configured');
     });
   }
   
@@ -46,60 +46,56 @@ function getDb() {
 }
 
 /**
- * Promisified database operations with detailed error logging
+ * Synchronous database operations for reliability
  */
-function dbRun(sql, params = []) {
+function dbRunSync(sql, params = []) {
   return new Promise((resolve, reject) => {
     const db = getDb();
-    console.log('[DB-RUN] Executing:', sql.substring(0, 100) + (sql.length > 100 ? '...' : ''));
-    console.log('[DB-RUN] Params:', params);
+    console.log('[DB-RUN] SQL:', sql.replace(/\s+/g, ' ').substring(0, 150));
+    console.log('[DB-RUN] Params:', JSON.stringify(params));
     
     db.run(sql, params, function(err) {
       if (err) {
-        console.error('❌ [DB-RUN] SQL Error:', err.message);
-        console.error('❌ [DB-RUN] SQL Statement:', sql);
-        console.error('❌ [DB-RUN] Parameters:', params);
+        console.error('❌ [DB-RUN] ERROR:', err.message);
+        console.error('❌ [DB-RUN] SQL:', sql);
+        console.error('❌ [DB-RUN] Params:', JSON.stringify(params));
         reject(err);
       } else {
-        console.log('✅ [DB-RUN] Success - ID:', this.lastID, 'Changes:', this.changes);
+        console.log('✅ [DB-RUN] SUCCESS - lastID:', this.lastID, 'changes:', this.changes);
         resolve({ lastID: this.lastID, changes: this.changes });
       }
     });
   });
 }
 
-function dbGet(sql, params = []) {
+function dbGetSync(sql, params = []) {
   return new Promise((resolve, reject) => {
     const db = getDb();
-    console.log('[DB-GET] Executing:', sql.substring(0, 100) + (sql.length > 100 ? '...' : ''));
+    console.log('[DB-GET] SQL:', sql.replace(/\s+/g, ' ').substring(0, 150));
     
     db.get(sql, params, (err, row) => {
       if (err) {
-        console.error('❌ [DB-GET] SQL Error:', err.message);
-        console.error('❌ [DB-GET] SQL Statement:', sql);
-        console.error('❌ [DB-GET] Parameters:', params);
+        console.error('❌ [DB-GET] ERROR:', err.message);
         reject(err);
       } else {
-        console.log('✅ [DB-GET] Success - Row found:', !!row);
+        console.log('✅ [DB-GET] SUCCESS - Found:', !!row);
         resolve(row);
       }
     });
   });
 }
 
-function dbAll(sql, params = []) {
+function dbAllSync(sql, params = []) {
   return new Promise((resolve, reject) => {
     const db = getDb();
-    console.log('[DB-ALL] Executing:', sql.substring(0, 100) + (sql.length > 100 ? '...' : ''));
+    console.log('[DB-ALL] SQL:', sql.replace(/\s+/g, ' ').substring(0, 150));
     
     db.all(sql, params, (err, rows) => {
       if (err) {
-        console.error('❌ [DB-ALL] SQL Error:', err.message);
-        console.error('❌ [DB-ALL] SQL Statement:', sql);
-        console.error('❌ [DB-ALL] Parameters:', params);
+        console.error('❌ [DB-ALL] ERROR:', err.message);
         reject(err);
       } else {
-        console.log('✅ [DB-ALL] Success - Rows:', rows?.length || 0);
+        console.log('✅ [DB-ALL] SUCCESS - Rows:', rows?.length || 0);
         resolve(rows || []);
       }
     });
@@ -107,97 +103,36 @@ function dbAll(sql, params = []) {
 }
 
 /**
- * Transaction wrapper with proper error handling
- */
-function dbTransaction(callback) {
-  return new Promise(async (resolve, reject) => {
-    const db = getDb();
-    
-    try {
-      console.log('[DB-TX] Starting transaction...');
-      
-      await new Promise((res, rej) => {
-        db.run('BEGIN TRANSACTION', (err) => {
-          if (err) {
-            console.error('❌ [DB-TX] Failed to begin transaction:', err.message);
-            rej(err);
-          } else {
-            console.log('✅ [DB-TX] Transaction started');
-            res();
-          }
-        });
-      });
-
-      const result = await callback();
-
-      await new Promise((res, rej) => {
-        db.run('COMMIT', (err) => {
-          if (err) {
-            console.error('❌ [DB-TX] Failed to commit transaction:', err.message);
-            rej(err);
-          } else {
-            console.log('✅ [DB-TX] Transaction committed');
-            res();
-          }
-        });
-      });
-
-      resolve(result);
-    } catch (error) {
-      console.error('❌ [DB-TX] Transaction error:', error.message);
-      
-      try {
-        await new Promise((res) => {
-          db.run('ROLLBACK', (err) => {
-            if (err) {
-              console.error('❌ [DB-TX] Failed to rollback:', err.message);
-            } else {
-              console.log('✅ [DB-TX] Transaction rolled back');
-            }
-            res();
-          });
-        });
-      } catch (rollbackError) {
-        console.error('❌ [DB-TX] Rollback error:', rollbackError.message);
-      }
-      
-      reject(error);
-    }
-  });
-}
-
-/**
  * Initialize database with all tables and seed data
  */
 async function initializeDatabase() {
-  console.log('🗃️  Initializing database schema...');
+  console.log('🗃️  STARTING DATABASE INITIALIZATION...');
   
   try {
-    // Ensure database connection is working
-    const testQuery = await dbGet('SELECT 1 as test');
-    console.log('✅ Database connection test passed:', testQuery);
-    
+    // Test basic connection first
+    console.log('🔍 Testing database connection...');
+    const testResult = await dbGetSync('SELECT 1 as test');
+    if (!testResult || testResult.test !== 1) {
+      throw new Error('Database connection test failed');
+    }
+    console.log('✅ Database connection working');
+
     // Create all tables
+    console.log('📋 Creating database tables...');
     await createAllTables();
-    
-    // Create triggers
-    await createTriggers();
-    
-    // Seed initial data
-    await seedInitialData();
-    
-    console.log('✅ Database initialization complete');
-    
-    // Verify tables exist
-    const tables = await dbAll(`
-      SELECT name FROM sqlite_master 
-      WHERE type='table' AND name NOT LIKE 'sqlite_%'
-      ORDER BY name
-    `);
-    console.log('📋 Created tables:', tables.map(t => t.name).join(', '));
+
+    // Seed admin users
+    console.log('👤 Seeding admin users...');
+    await seedAdminUsers();
+
+    // Verify setup
+    console.log('🔍 Verifying database setup...');
+    await verifyDatabaseSetup();
+
+    console.log('✅ DATABASE INITIALIZATION COMPLETE');
     
   } catch (error) {
-    console.error('❌ Database initialization failed:', error.message);
+    console.error('❌ DATABASE INITIALIZATION FAILED:', error.message);
     throw error;
   }
 }
@@ -206,10 +141,8 @@ async function initializeDatabase() {
  * Create all required tables
  */
 async function createAllTables() {
-  console.log('📋 Creating database tables...');
-
   // usuarios table
-  await dbRun(`
+  await dbRunSync(`
     CREATE TABLE IF NOT EXISTS usuarios (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       usuario TEXT UNIQUE NOT NULL,
@@ -225,9 +158,10 @@ async function createAllTables() {
   `);
 
   // mural_posts table
-  await dbRun(`
+  await dbRunSync(`
     CREATE TABLE IF NOT EXISTS mural_posts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      usuario_id INTEGER NOT NULL,
       autor_usuario TEXT NOT NULL,
       autor_setor TEXT NOT NULL,
       titulo TEXT NOT NULL,
@@ -237,36 +171,41 @@ async function createAllTables() {
       likes_count INTEGER NOT NULL DEFAULT 0,
       comments_count INTEGER NOT NULL DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (usuario_id) REFERENCES usuarios (id)
     )
   `);
 
   // mural_comments table
-  await dbRun(`
+  await dbRunSync(`
     CREATE TABLE IF NOT EXISTS mural_comments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       post_id INTEGER NOT NULL,
+      usuario_id INTEGER NOT NULL,
       autor_usuario TEXT NOT NULL,
       texto TEXT NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (post_id) REFERENCES mural_posts (id) ON DELETE CASCADE
+      FOREIGN KEY (post_id) REFERENCES mural_posts (id) ON DELETE CASCADE,
+      FOREIGN KEY (usuario_id) REFERENCES usuarios (id)
     )
   `);
 
   // mural_likes table
-  await dbRun(`
+  await dbRunSync(`
     CREATE TABLE IF NOT EXISTS mural_likes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       post_id INTEGER NOT NULL,
+      usuario_id INTEGER NOT NULL,
       usuario TEXT NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(post_id, usuario),
-      FOREIGN KEY (post_id) REFERENCES mural_posts (id) ON DELETE CASCADE
+      UNIQUE(post_id, usuario_id),
+      FOREIGN KEY (post_id) REFERENCES mural_posts (id) ON DELETE CASCADE,
+      FOREIGN KEY (usuario_id) REFERENCES usuarios (id)
     )
   `);
 
   // ti_solicitacoes table
-  await dbRun(`
+  await dbRunSync(`
     CREATE TABLE IF NOT EXISTS ti_solicitacoes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       usuario_id INTEGER NOT NULL,
@@ -284,7 +223,7 @@ async function createAllTables() {
   `);
 
   // reservas table
-  await dbRun(`
+  await dbRunSync(`
     CREATE TABLE IF NOT EXISTS reservas (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       usuario_id INTEGER NOT NULL,
@@ -302,7 +241,7 @@ async function createAllTables() {
   `);
 
   // portaria_agendamentos table
-  await dbRun(`
+  await dbRunSync(`
     CREATE TABLE IF NOT EXISTS portaria_agendamentos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       nome_visitante TEXT NOT NULL,
@@ -323,7 +262,7 @@ async function createAllTables() {
   `);
 
   // trocas_proteina table
-  await dbRun(`
+  await dbRunSync(`
     CREATE TABLE IF NOT EXISTS trocas_proteina (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       usuario_id INTEGER NOT NULL,
@@ -340,7 +279,7 @@ async function createAllTables() {
   `);
 
   // pontos table for gamification
-  await dbRun(`
+  await dbRunSync(`
     CREATE TABLE IF NOT EXISTS pontos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       usuario_id INTEGER NOT NULL,
@@ -357,137 +296,113 @@ async function createAllTables() {
 }
 
 /**
- * Create database indexes for performance
+ * Seed admin users if they don't exist
  */
-async function createIndexes() {
-  console.log('📊 Creating database indexes...');
-
-  const indexes = [
-    'CREATE INDEX IF NOT EXISTS idx_usuarios_usuario ON usuarios(usuario)',
-    'CREATE INDEX IF NOT EXISTS idx_usuarios_email ON usuarios(email)',
-    'CREATE INDEX IF NOT EXISTS idx_mural_posts_publicado ON mural_posts(publicado, created_at DESC)',
-    'CREATE INDEX IF NOT EXISTS idx_mural_comments_post_id ON mural_comments(post_id, created_at DESC)',
-    'CREATE INDEX IF NOT EXISTS idx_mural_likes_post_usuario ON mural_likes(post_id, usuario)',
-    'CREATE INDEX IF NOT EXISTS idx_ti_solicitacoes_usuario ON ti_solicitacoes(usuario_id, created_at DESC)',
-    'CREATE INDEX IF NOT EXISTS idx_ti_solicitacoes_status ON ti_solicitacoes(status)',
-    'CREATE INDEX IF NOT EXISTS idx_reservas_data ON reservas(data_reserva, hora_inicio)',
-    'CREATE INDEX IF NOT EXISTS idx_reservas_sala ON reservas(sala, data_reserva)',
-    'CREATE INDEX IF NOT EXISTS idx_portaria_data ON portaria_agendamentos(data_visita, hora_entrada)',
-    'CREATE INDEX IF NOT EXISTS idx_trocas_data ON trocas_proteina(data_troca)',
-    'CREATE INDEX IF NOT EXISTS idx_pontos_usuario ON pontos(usuario_id, created_at DESC)'
-  ];
-
-  for (const indexSql of indexes) {
-    try {
-      await dbRun(indexSql);
-    } catch (error) {
-      console.warn('⚠️ Index creation warning:', error.message);
-    }
-  }
-
-  console.log('✅ Database indexes created');
-}
-
-/**
- * Create triggers for updated_at columns
- */
-async function createTriggers() {
-  console.log('🔧 Creating updated_at triggers...');
-
-  const tables = [
-    'usuarios', 
-    'mural_posts',
-    'ti_solicitacoes', 
-    'reservas', 
-    'portaria_agendamentos',
-    'trocas_proteina'
-  ];
-
-  for (const table of tables) {
-    try {
-      await dbRun(`
-        CREATE TRIGGER IF NOT EXISTS trigger_${table}_updated_at
-        AFTER UPDATE ON ${table}
-        BEGIN
-          UPDATE ${table} SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
-        END
-      `);
-    } catch (error) {
-      console.warn(`⚠️ Trigger creation warning for ${table}:`, error.message);
-    }
-  }
-
-  console.log('✅ Triggers created successfully');
-}
-
-/**
- * Seed initial admin users
- */
-async function seedInitialData() {
-  console.log('🌱 Seeding initial data...');
-
+async function seedAdminUsers() {
   try {
     // Check if any admin users exist
-    const existingAdmins = await dbGet(`
+    const existingAdmin = await dbGetSync(`
       SELECT COUNT(*) as count 
       FROM usuarios 
       WHERE role = 'admin'
     `);
 
-    if (existingAdmins && existingAdmins.count > 0) {
+    if (existingAdmin && existingAdmin.count > 0) {
       console.log('✅ Admin users already exist, skipping seed');
       return;
     }
 
-    // Create admin users
     console.log('👤 Creating admin users...');
     
-    const adminTiHash = await bcrypt.hash('admin123', 12);
-    const adminRhHash = await bcrypt.hash('admin123', 12);
+    // Create admin users with bcrypt
+    const adminTiHash = bcrypt.hashSync('admin123', 12);
+    const adminRhHash = bcrypt.hashSync('admin123', 12);
 
-    await dbTransaction(async () => {
-      const tiResult = await dbRun(`
-        INSERT INTO usuarios 
-        (usuario, senha_hash, setor, role, nome, email, ativo) 
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `, [
-        'admin-ti', 
-        adminTiHash, 
-        'TI', 
-        'admin', 
-        'Administrador TI', 
-        'admin.ti@grupocropfield.com.br',
-        1
-      ]);
+    const tiResult = await dbRunSync(`
+      INSERT INTO usuarios 
+      (usuario, senha_hash, setor, role, nome, email, ativo) 
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `, [
+      'admin-ti', 
+      adminTiHash, 
+      'TI', 
+      'admin', 
+      'Administrador TI', 
+      'admin.ti@grupocropfield.com.br',
+      1
+    ]);
 
-      const rhResult = await dbRun(`
-        INSERT INTO usuarios 
-        (usuario, senha_hash, setor, role, nome, email, ativo) 
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `, [
-        'admin-rh', 
-        adminRhHash, 
-        'RH', 
-        'admin', 
-        'Administrador RH', 
-        'admin.rh@grupocropfield.com.br',
-        1
-      ]);
+    const rhResult = await dbRunSync(`
+      INSERT INTO usuarios 
+      (usuario, senha_hash, setor, role, nome, email, ativo) 
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `, [
+      'admin-rh', 
+      adminRhHash, 
+      'RH', 
+      'admin', 
+      'Administrador RH', 
+      'admin.rh@grupocropfield.com.br',
+      1
+    ]);
 
-      console.log('✅ Admin users created:');
-      console.log('   👤 admin-ti (ID:', tiResult.lastID, ') / admin123');
-      console.log('   👤 admin-rh (ID:', rhResult.lastID, ') / admin123');
-    });
-
-    // Verify users were created
-    const allUsers = await dbAll('SELECT id, usuario, setor, role FROM usuarios');
-    console.log('📋 Total users in database:', allUsers.length);
-    allUsers.forEach(user => {
-      console.log(`   - ${user.usuario} (${user.setor}/${user.role}) ID: ${user.id}`);
-    });
+    console.log('✅ Admin users created successfully:');
+    console.log('   👤 admin-ti (ID:', tiResult.lastID, ')');
+    console.log('   👤 admin-rh (ID:', rhResult.lastID, ')');
 
   } catch (error) {
-    console.error('❌ Error seeding data:', error.message);
+    console.error('❌ Error seeding admin users:', error.message);
+    throw error;
+  }
+}
+
+/**
+ * Verify database setup is working
+ */
+async function verifyDatabaseSetup() {
+  try {
+    // Check tables exist
+    const tables = await dbAllSync(`
+      SELECT name FROM sqlite_master 
+      WHERE type='table' AND name NOT LIKE 'sqlite_%'
+      ORDER BY name
+    `);
+    
+    console.log('📋 Database tables:', tables.map(t => t.name).join(', '));
+    
+    if (tables.length < 5) {
+      throw new Error(`Expected at least 5 tables, found ${tables.length}`);
+    }
+
+    // Check admin users exist
+    const adminCount = await dbGetSync(`
+      SELECT COUNT(*) as count FROM usuarios WHERE role = 'admin'
+    `);
+    
+    console.log('👤 Admin users in database:', adminCount.count);
+    
+    if (!adminCount || adminCount.count < 1) {
+      throw new Error('No admin users found in database');
+    }
+
+    // Test write operation
+    const testResult = await dbRunSync(`
+      INSERT OR REPLACE INTO usuarios 
+      (id, usuario, senha_hash, setor, role, nome, email, ativo) 
+      VALUES (999, 'test-user', 'test-hash', 'Test', 'colaborador', 'Test User', 'test@test.com', 1)
+    `);
+    
+    if (!testResult || !testResult.lastID) {
+      throw new Error('Test write operation failed');
+    }
+    
+    // Clean up test user
+    await dbRunSync('DELETE FROM usuarios WHERE id = 999');
+    
+    console.log('✅ Database setup verification passed');
+
+  } catch (error) {
+    console.error('❌ Database verification failed:', error.message);
     throw error;
   }
 }
@@ -513,21 +428,15 @@ function closeDb() {
   return Promise.resolve();
 }
 
-// Export all functions with backward compatibility
+// Export functions
 module.exports = {
   getDb,
-  run: dbRun,        // backward compatibility
-  get: dbGet,        // backward compatibility
-  all: dbAll,        // backward compatibility
-  tx: dbTransaction, // backward compatibility
-  dbRun,
-  dbGet,
-  dbAll,
-  dbTransaction,
+  run: dbRunSync,
+  get: dbGetSync,
+  all: dbAllSync,
   initializeDatabase,
   createAllTables,
-  createIndexes,
-  createTriggers,
-  seedInitialData,
+  seedAdminUsers,
+  verifyDatabaseSetup,
   closeDb
 };
