@@ -191,8 +191,8 @@ db.serialize(() => {
       );
     });
   };
-  seed('admin-1', 'Administrador', 'admin@grupocropfield.com.br', 'admin123', 'TI', 'admin', 1, 1);
-  seed('rh-1', 'Recursos Humanos', 'rh@grupocropfield.com.br', 'rh123', 'RH', 'rh', 1, 1);
+  seed('admin-1', 'Administrador TI', 'admin-ti@grupocropfield.com.br', 'admin123', 'TI', 'admin', 1, 1);
+  seed('rh-1', 'Administrador RH', 'admin-rh@grupocropfield.com.br', 'admin123', 'RH', 'admin', 1, 1);
   seed('mod-1', 'Moderador Sistema', 'moderador@grupocropfield.com.br', 'mod123', 'TI', 'moderador', 1, 1);
   seed('colab-1', 'João Colaborador', 'colaborador@grupocropfield.com.br', 'colab123', 'Comercial', 'colaborador', 0, 0);
 });
