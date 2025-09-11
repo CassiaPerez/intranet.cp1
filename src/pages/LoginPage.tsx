@@ -10,6 +10,7 @@ export const LoginPage: React.FC = () => {
   const { isAuthenticated } = useAuth();
   const [searchParams] = useSearchParams();
   const [email, setEmail] = useState(''); // Changed from username to email
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -58,23 +59,23 @@ export const LoginPage: React.FC = () => {
   const handleManualLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email || !password) { // Changed from username to email
-      toast.error('Preencha todos os campos!');
+    if (!username || !password) {
+      toast.error('Preencha usuário e senha!');
       return;
     }
 
     setLoading(true);
     
     try {
-      console.log('[LOGIN] Tentando login manual para:', email);
+      console.log('[LOGIN] Tentando login manual para:', username);
       
-      const response = await fetch(`${API_BASE || ''}/auth/login`, {
+      const response = await fetch(`${API_BASE || ''}/login-admin`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ usuario: username, senha: password }),
       });
 
       if (!response.ok) {
@@ -87,7 +88,7 @@ export const LoginPage: React.FC = () => {
       const data = await response.json();
       console.log('[LOGIN] Login response:', { 
         success: !!data.user, 
-        userEmail: data.user?.email,
+        userName: data.user?.nome,
         userRole: data.user?.role 
       });
       
@@ -98,10 +99,10 @@ export const LoginPage: React.FC = () => {
       
       toast.success('Login realizado com sucesso!');
       
-      // Force reload to update auth context
+      // Redirect to admin panel after manual login
       setTimeout(() => {
-        window.location.reload();
-      }, 100);
+        window.location.href = '/admin';
+      }, 500);
       
     } catch (error) {
       console.error('Login error:', error);
@@ -146,16 +147,16 @@ export const LoginPage: React.FC = () => {
           <form onSubmit={handleManualLogin} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email
+                Usuário
               </label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
-                  type="email" // Changed type to email
-                  value={email} // Changed from username to email
-                  onChange={(e) => setEmail(e.target.value)} // Changed from setUsername to setEmail
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Digite seu email" // Changed placeholder
+                  placeholder="Digite seu usuário"
                   required
                 />
               </div>
@@ -197,10 +198,9 @@ export const LoginPage: React.FC = () => {
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               <strong>Contas de Teste:</strong><br />
-              <strong>Admin:</strong> <code>admin@grupocropfield.com.br / admin123</code><br />
+              <strong>Login Manual:</strong> <code>admin-ti / admin123</code> ou <code>admin-rh / admin123</code><br />
               <span className="text-xs text-gray-500">
-                RH: <code>rh@grupocropfield.com.br / rh123</code> | Moderador: <code>moderador@grupocropfield.com.br / mod123</code><br />
-                Colaborador: <code>colaborador@grupocropfield.com.br / colab123</code>
+                Para colaboradores, use "Entrar com Google"
               </span>
             </p>
             
@@ -212,7 +212,7 @@ export const LoginPage: React.FC = () => {
             
             <div className="mt-2 p-2 bg-gray-50 rounded-lg">
               <p className="text-xs text-gray-600">
-                🔧 <strong>Desenvolvimento:</strong> Para configurar Google OAuth, execute <code>npm run setup-oauth</code>
+                🔧 <strong>Login Manual:</strong> Apenas para administradores TI e RH
               </p>
             </div>
           </div>
