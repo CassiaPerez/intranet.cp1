@@ -13,6 +13,8 @@ export type User = {
   sector?: string;
   role: string;
   picture?: string;
+  avatar?: string;
+  avatar_url?: string;
   can_publish_mural?: number;
   can_moderate_mural?: number;
   pontos_gamificacao?: number;
@@ -55,6 +57,8 @@ function normalizeUser(raw: any): User | null {
     sector: setor,
     role,
     picture,
+    avatar: picture,
+    avatar_url: picture,
     can_publish_mural: raw.can_publish_mural ?? 0,
     can_moderate_mural: raw.can_moderate_mural ?? 0,
     pontos_gamificacao: raw.pontos_gamificacao ?? 0
@@ -83,11 +87,19 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
 
   async function fetchMe(): Promise<User | null> {
     try {
-      console.log('[AUTH] Fetching user from:', `${API_BASE}/api/me`);
-      const res = await fetch(`${API_BASE}/api/me`, { credentials: 'include' });
+      const meUrl = `${API_BASE}/api/me`;
+      console.log('[AUTH] Fetching user from:', meUrl);
+      
+      const res = await fetch(meUrl, { 
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
       
       if (!res.ok) {
-        console.log('[AUTH] API /me failed:', res.status, res.statusText);
+        const errorText = await res.text().catch(() => 'No response body');
+        console.log('[AUTH] API /me failed:', res.status, res.statusText, 'body:', errorText.slice(0, 200));
         return null;
       }
 
@@ -102,7 +114,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       try { 
         data = JSON.parse(text); 
       } catch (e) {
-        console.error('[AUTH] Failed to parse /me response:', e);
+        console.error('[AUTH] Failed to parse /me response:', e, 'text:', text.slice(0, 200));
         return null;
       }
 
@@ -114,7 +126,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       }
       
       u = fillMissingFields(u);
-      console.log('[AUTH] User loaded successfully:', u.email, u.role);
+      console.log('[AUTH] User loaded successfully:', u.email, 'role:', u.role, 'setor:', u.setor);
       return u;
     } catch (error) {
       console.error('[AUTH] Error fetching user:', error);
@@ -166,20 +178,89 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
   const loginWithGoogle = () => {
     // Redireciona para o backend iniciar o OAuth
     console.log('[AUTH] Starting Google login...');
-    const googleUrl = `${API_BASE}/auth/google`;
-    console.log('[AUTH] Redirecting to:', googleUrl);
-    window.location.href = googleUrl;
+    
+    // Check if Google OAuth is enabled first
+    fetch(`${API_BASE}/api/config`, { credentials: 'include' })
+      .then(res => res.json())
+      .then(config => {
+        console.log('[AUTH] Config loaded:', config);
+        
+        if (!config.googleEnabled) {
+          console.warn('[AUTH] Google OAuth not enabled on server');
+          // Still try to redirect, let server handle the error
+        }
+        
+        const googleUrl = `${API_BASE}/auth/google`;
+        console.log('[AUTH] Redirecting to Google OAuth:', googleUrl);
+        window.location.href = googleUrl;
+      })
+      .catch(error => {
+        console.error('[AUTH] Failed to check config:', error);
+        // Fallback: try direct redirect anyway
+        const googleUrl = `${API_BASE}/auth/google`;
+        console.log('[AUTH] Config check failed, trying direct redirect to:', googleUrl);
+        window.location.href = googleUrl;
+      });
   };
 
   const logout = async () => {
+    try {
+      console.log('[AUTH] Starting logout process...');
+      localStorage.removeItem(STORAGE_KEY);
+      
+      // Try both logout endpoints
+      const logoutPromises = [
+        fetch(`${API_BASE}/auth/logout`, { 
+          method: 'POST', 
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' }
+        }),
+        fetch(`${API_BASE}/api/auth/logout`, { 
+          method: 'POST', 
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' }
+        })
+      ];
+      
+      await Promise.allSettled(logoutPromises);
+      console.log('[AUTH] Logout requests completed');
+    } catch (error) {
+      console.error('[AUTH] Logout error:', error);
+    } finally {
+      setUser(null);
+      console.log('[AUTH] Logout completed - user cleared');
+    }
+  };
+
+  // Handle URL parameters for login success/error
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const loginParam = urlParams.get('login');
+    const errorParam = urlParams.get('error');
+    
+    if (loginParam === 'success') {
+      console.log('[AUTH] Login success detected in URL, reloading user data...');
+      // Clear the URL parameter
+      window.history.replaceState({}, '', window.location.pathname);
+      // Reload user data
+      reload();
+    } else if (errorParam) {
+      console.log('[AUTH] Login error detected in URL:', errorParam);
+      // The LoginPage component will handle showing the error
+    }
+  }, []);
+
+  // Legacy logout method for backward compatibility
+  const legacyLogout = async () => {
     try {
       localStorage.removeItem(STORAGE_KEY);
       await fetch(`${API_BASE}/auth/logout`, { 
         method: 'POST', 
         credentials: 'include' 
       }).catch(() => {}); // ignore errors on logout
-    } catch (_) {
+    } catch (error) {
       // mesmo que falhe, vamos limpar o estado local
+      console.log('[AUTH] Legacy logout error (ignored):', error);
     } finally {
       setUser(null);
       console.log('[AUTH] Logout completed');

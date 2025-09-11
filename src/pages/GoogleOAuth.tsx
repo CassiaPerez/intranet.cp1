@@ -1,23 +1,33 @@
 import React, { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LoginPage as BaseLoginPage } from './LoginPage';
+import toast from 'react-hot-toast';
 
 /**
  * Wrapper component for handling Google OAuth redirects
  * This component is used when users return from Google OAuth flow
  */
 const GoogleOAuth: React.FC = () => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, reload } = useAuth();
   const location = useLocation();
 
   useEffect(() => {
     // Log the redirect for debugging
-    console.log('[GOOGLE-OAUTH] Redirect received:', location.search);
+    console.log('[GOOGLE-OAUTH] Redirect received:', location.search, location.pathname);
     
-    // The auth context will handle checking authentication status
-    // If user is authenticated, they'll be redirected to dashboard
-    // If not, they'll be redirected to login with error message
+    // Handle specific OAuth callback scenarios
+    const urlParams = new URLSearchParams(location.search);
+    const error = urlParams.get('error');
+    const login = urlParams.get('login');
+    
+    if (error) {
+      console.log('[GOOGLE-OAUTH] Error in callback:', error);
+      // Let the auth context handle the error display
+    } else if (login === 'success') {
+      console.log('[GOOGLE-OAUTH] Success in callback, reloading auth state');
+      // Force reload of auth state
+      reload();
+    }
   }, [location]);
 
   if (loading) {
@@ -25,9 +35,12 @@ const GoogleOAuth: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 flex items-center justify-center">
         <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4">
           <div className="text-center">
+            <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <span className="text-white font-bold text-2xl">GC</span>
+            </div>
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
             <h2 className="text-lg font-semibold text-gray-900 mb-2">Finalizando login...</h2>
-            <p className="text-gray-600 text-sm">Aguarde enquanto verificamos suas credenciais.</p>
+            <p className="text-gray-600 text-sm">Aguarde enquanto verificamos suas credenciais do Google.</p>
           </div>
         </div>
       </div>
@@ -35,11 +48,13 @@ const GoogleOAuth: React.FC = () => {
   }
 
   if (isAuthenticated) {
+    console.log('[GOOGLE-OAUTH] User authenticated, redirecting to dashboard');
     return <Navigate to="/" replace />;
   }
 
-  // If not authenticated, show login page (which will handle error display)
-  return <BaseLoginPage />;
+  // If not authenticated, redirect to login page with error handling
+  console.log('[GOOGLE-OAUTH] Not authenticated, redirecting to login');
+  return <Navigate to={`/login${location.search}`} replace />;
 };
 
 export default GoogleOAuth;

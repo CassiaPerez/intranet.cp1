@@ -19,14 +19,27 @@ export const LoginPage: React.FC = () => {
     const error = searchParams.get('error');
     const login = searchParams.get('login');
     
-    if (error === 'google_auth_failed') {
-      toast.error('Falha na autenticação com Google. Tente novamente.');
-    } else if (error === 'authentication_failed') {
-      toast.error('Usuário não encontrado ou não autorizado.');
-    } else if (error === 'google_not_configured') {
-      toast.error('Login com Google não está configurado. Use email e senha.');
-    } else if (login === 'success') {
+    if (error) {
+      // Decode the error message
+      const decodedError = decodeURIComponent(error);
+      
+      if (error === 'google_auth_failed') {
+        toast.error('Falha na autenticação com Google. Tente novamente.');
+      } else if (error === 'authentication_failed') {
+        toast.error('Usuário não encontrado ou não autorizado.');
+      } else if (error === 'google_not_configured') {
+        toast.error('Login com Google não está configurado. Use email e senha.');
+      } else if (decodedError.includes('não está autorizado')) {
+        toast.error('Seu email não está autorizado no sistema. Contate o administrador.');
+      } else {
+        toast.error(`Erro de autenticação: ${decodedError}`);
+      }
+    }
+    
+    if (login === 'success') {
       toast.success('Login realizado com sucesso!');
+      // Clear the URL parameter
+      window.history.replaceState({}, '', window.location.pathname);
     }
   }, [searchParams]);
 
@@ -37,23 +50,30 @@ export const LoginPage: React.FC = () => {
   const handleGoogleLogin = () => {
     console.log('[LOGIN] Iniciando login Google...');
     
-    // Check if Google OAuth is enabled
-    fetch('/api/config')
+    // Check if Google OAuth is enabled and get proper URLs
+    fetch(`${API_BASE || ''}/api/config`, { credentials: 'include' })
       .then(res => res.json())
       .then(config => {
+        console.log('[LOGIN] Server config:', config);
+        
         if (!config.googleEnabled) {
+          console.log('[LOGIN] Google OAuth not enabled on server');
           toast.error('Login com Google não está configurado. Use email e senha.');
           return;
         }
         
-        const googleUrl = `${API_BASE}/auth/google`;
+        const googleUrl = `${API_BASE || ''}/auth/google`;
         console.log('[LOGIN] Redirecting to Google OAuth:', googleUrl);
         window.location.href = googleUrl;
       })
-      .catch(() => {
+      .catch(error => {
         // Fallback: try direct redirect
-        console.log('[LOGIN] Config check failed, trying direct redirect...');
-        window.location.href = `${API_BASE}/auth/google`;
+        console.error('[LOGIN] Config check failed:', error);
+        console.log('[LOGIN] Trying direct redirect anyway...');
+        
+        const googleUrl = `${API_BASE || ''}/auth/google`;
+        console.log('[LOGIN] Direct redirect to:', googleUrl);
+        window.location.href = googleUrl;
       });
   };
 
@@ -68,39 +88,67 @@ export const LoginPage: React.FC = () => {
     setLoading(true);
     
     try {
-      console.log('[LOGIN] Tentando login manual para:', email); // Changed from username to email
+      console.log('[LOGIN] Tentando login manual para:', email);
       
-      const response = await fetch('/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ email, password }), // Changed from username to email
-      });
-
-      console.log('[LOGIN] Response status:', response.status);
+      // Try both endpoints to ensure compatibility
+      const endpoints = [
+        `${API_BASE || ''}/auth/login`,
+        `${API_BASE || ''}/api/auth/login`
+      ];
       
-      if (response.ok) {
-        const data = await response.json();
-        console.log('[LOGIN] Login success:', data.user?.email);
-        
-        // Store user data in localStorage for immediate access
-        if (data.user) {
-          localStorage.setItem('currentUser', JSON.stringify(data.user));
+      let response = null;
+      let lastError = null;
+      
+      for (const endpoint of endpoints) {
+        try {
+          console.log('[LOGIN] Trying endpoint:', endpoint);
+          response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({ email, password }),
+          });
+          
+          if (response.ok) {
+            console.log('[LOGIN] Login successful via:', endpoint);
+            break;
+          } else {
+            console.log('[LOGIN] Login failed via:', endpoint, 'status:', response.status);
+            lastError = await response.json().catch(() => ({ error: 'Unknown error' }));
+          }
+        } catch (error) {
+          console.log('[LOGIN] Network error with endpoint:', endpoint, error);
+          lastError = { error: 'Network error' };
         }
-        
-        toast.success('Login realizado com sucesso!');
-        
-        // Force reload to update auth context
-        setTimeout(() => {
-          window.location.reload();
-        }, 500);
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        console.log('[LOGIN] Login failed:', response.status, errorData);
-        toast.error(errorData.error || 'Credenciais inválidas');
       }
+      
+      if (!response || !response.ok) {
+        console.log('[LOGIN] All endpoints failed, last error:', lastError);
+        toast.error(lastError?.error || 'Erro de conexão. Verifique se o servidor está rodando.');
+        return;
+      }
+
+      const data = await response.json();
+      console.log('[LOGIN] Login response:', { 
+        success: !!data.user, 
+        userEmail: data.user?.email,
+        userRole: data.user?.role 
+      });
+      
+      // Store user data in localStorage for immediate access
+      if (data.user) {
+        localStorage.setItem('currentUser', JSON.stringify(data.user));
+      }
+      
+      toast.success('Login realizado com sucesso!');
+      
+      // Force reload to update auth context
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 500);
+      
     } catch (error) {
       console.error('Login error:', error);
       toast.error('Erro de conexão. Tente novamente.');
@@ -205,6 +253,12 @@ export const LoginPage: React.FC = () => {
             <div className="mt-4 p-3 bg-blue-50 rounded-lg">
               <p className="text-xs text-blue-700">
                 💡 <strong>Para login com Google:</strong> Entre em contato com o administrador para autorizar seu email corporativo no sistema.
+              </p>
+            </div>
+            
+            <div className="mt-2 p-2 bg-gray-50 rounded-lg">
+              <p className="text-xs text-gray-600">
+                🔧 <strong>Desenvolvimento:</strong> Para configurar Google OAuth, execute <code>npm run setup-oauth</code>
               </p>
             </div>
           </div>

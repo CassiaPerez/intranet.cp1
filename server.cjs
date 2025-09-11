@@ -262,36 +262,69 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
   }, async (_accessToken, _refreshToken, profile, done) => {
     try {
       const email = profile.emails?.[0]?.value?.toLowerCase();
-      console.log('[GOOGLE] Processing login for email:', email);
+      const googleName = (profile.displayName || `${profile.name?.givenName || ''} ${profile.name?.familyName || ''}`).trim();
+      const googlePhoto = profile.photos?.[0]?.value || null;
       
-      if (!email) return done(new Error('Email não fornecido pelo Google'), null);
+      console.log('[GOOGLE] Processing login for:', email, 'name:', googleName);
+      
+      if (!email) {
+        console.log('[GOOGLE] No email provided by Google');
+        return done(new Error('Email não fornecido pelo Google'), null);
+      }
 
       db.get('SELECT * FROM usuarios WHERE email = ? AND ativo = 1', [email], (err, user) => {
-        if (err) return done(err, null);
+        if (err) {
+          console.error('[GOOGLE] Database error:', err);
+          return done(err, null);
+        }
+        
         if (!user) {
-          console.log('[GOOGLE] User not found in database:', email);
-          return done(new Error('Usuário não autorizado. Contate o administrador.'), null);
+          console.log('[GOOGLE] User not found or inactive in database:', email);
+          return done(new Error(`Usuário ${email} não está autorizado ou inativo. Contate o administrador.`), null);
         }
 
         console.log('[GOOGLE] User found:', user.email, 'role:', user.role);
-        const nomeGoogle = (profile.displayName || `${profile.name?.givenName || ''} ${profile.name?.familyName || ''}`).trim() || 'Usuário';
-        const nomeFinal = computeName(user.email, nomeGoogle, null);
+        const nomeFinal = computeName(user.email, user.nome, googleName);
 
-        const finalize = (u) => { u.nome = nomeFinal; return done(null, u); };
+        // Update user with Google info if needed
+        const needsUpdate = (user.nome !== nomeFinal && nomeFinal !== 'Usuário') || 
+                           (googlePhoto && !user.avatar_url);
 
-        if ((user.nome || '').trim() !== nomeFinal || /^usu[aá]rio$/i.test(user.nome || '')) {
-          db.run('UPDATE usuarios SET nome = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [nomeFinal, user.id], (e) => {
-            if (e) console.warn('⚠️ Erro ao atualizar nome do usuário:', e.message);
-            finalize(user);
+        if (needsUpdate) {
+          console.log('[GOOGLE] Updating user info:', { 
+            oldName: user.nome, 
+            newName: nomeFinal,
+            hasPhoto: !!googlePhoto 
+          });
+          
+          const updateSql = googlePhoto 
+            ? 'UPDATE usuarios SET nome = ?, avatar_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+            : 'UPDATE usuarios SET nome = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
+          const updateParams = googlePhoto 
+            ? [nomeFinal, googlePhoto, user.id]
+            : [nomeFinal, user.id];
+            
+          db.run(updateSql, updateParams, (e) => {
+            if (e) console.warn('⚠️ Erro ao atualizar usuário:', e.message);
+            
+            // Return updated user object
+            const updatedUser = { 
+              ...user, 
+              nome: nomeFinal,
+              avatar_url: googlePhoto || user.avatar_url 
+            };
+            return done(null, updatedUser);
           });
         } else {
+          // Just update last access
           db.run('UPDATE usuarios SET updated_at = CURRENT_TIMESTAMP WHERE id = ?', [user.id], (e) => {
-            if (e) console.warn('⚠️ Erro ao atualizar usuário:', e.message);
-            finalize(user);
+            if (e) console.warn('⚠️ Erro ao atualizar último acesso:', e.message);
+            return done(null, user);
           });
         }
       });
     } catch (error) {
+      console.error('[GOOGLE] OAuth strategy error:', error);
       return done(error, null);
     }
   }));
@@ -316,19 +349,19 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
   app.get('/auth/google/callback',
     passport.authenticate('google', { 
       session: false, 
-      failureRedirect: `${WEB_URL}/login?error=google_auth_failed`,
+      failureMessage: true,
       keepSessionInfo: false
     }),
-    (req, res) => {
+    (req, res, next) => {
       console.log('[GOOGLE] Callback executado');
       const user = req.user;
       
       if (!user) {
         console.log('[GOOGLE] Callback sem user');
-        return res.redirect(`${WEB_URL}/login?error=authentication_failed`);
+        return res.redirect(`${WEB_URL}/login?error=google_auth_failed`);
       }
 
-      console.log('[GOOGLE] Gerando token para:', user.email);
+      console.log('[GOOGLE] Gerando token para:', user.email, 'role:', user.role);
       const token = jwt.sign(
         {
           id: user.id,
@@ -337,6 +370,7 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
           name: user.nome, // nome já corrigido
           setor: user.setor,
           sector: user.setor,
+          picture: user.avatar_url,
           can_publish_mural: user.can_publish_mural || 0,
           can_moderate_mural: user.can_moderate_mural || 0
         },
@@ -347,19 +381,34 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
       console.log('[GOOGLE] Setting cookie and redirecting');
       res.cookie('token', token, {
         httpOnly: true,
-        secure: NODE_ENV === 'production',
+        secure: false, // Set to true in production with HTTPS
         sameSite: 'lax',
         maxAge: 24 * 60 * 60 * 1000,
-        path: '/'
+        path: '/',
+        domain: NODE_ENV === 'production' ? undefined : undefined // Let browser decide
       });
 
-      res.redirect(`${WEB_URL}/?login=success`);
+      console.log('[GOOGLE] Cookie set, redirecting to frontend');
+      return res.redirect(`${WEB_URL}/?login=success`);
     }
   );
+
+  // Handle auth failures with proper error messages
+  app.get('/auth/google/failure', (req, res) => {
+    console.log('[GOOGLE] Auth failure:', req.session?.messages);
+    const error = req.session?.messages?.[0] || 'authentication_failed';
+    res.redirect(`${WEB_URL}/login?error=${encodeURIComponent(error)}`);
+  });
 } else {
   console.log('⚠️ Google OAuth não configurado - defina GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET');
-  app.get('/auth/google', (_req, res) => res.redirect(`${WEB_URL}/login?error=google_not_configured`));
-  app.get('/api/auth/google', (_req, res) => res.redirect(`${WEB_URL}/login?error=google_not_configured`));
+  app.get('/auth/google', (_req, res) => {
+    console.log('[GOOGLE] OAuth not configured, redirecting with error');
+    res.redirect(`${WEB_URL}/login?error=google_not_configured`);
+  });
+  app.get('/api/auth/google', (_req, res) => {
+    console.log('[GOOGLE] OAuth not configured, redirecting with error');
+    res.redirect(`${WEB_URL}/login?error=google_not_configured`);
+  });
 }
 
 // ======================
@@ -448,6 +497,7 @@ const issueLogin = (res, user) => {
       name: user.nome, // já corrigido
       setor: user.setor,
       sector: user.setor,
+      picture: user.avatar_url,
       can_publish_mural: user.can_publish_mural || 0,
       can_moderate_mural: user.can_moderate_mural || 0
     },
@@ -457,15 +507,17 @@ const issueLogin = (res, user) => {
 
   res.cookie('token', token, {
     httpOnly: true,
-    secure: NODE_ENV === 'production',
+    secure: false, // Set to true in production with HTTPS
     sameSite: 'lax',
-    maxAge: 24 * 60 * 60 * 1000
+    maxAge: 24 * 60 * 60 * 1000,
+    path: '/'
   });
 
   res.json({
     user: {
       id: user.id, name: user.nome, email: user.email,
       setor: user.setor, sector: user.setor, role: user.role,
+      picture: user.avatar_url,
       can_publish_mural: user.can_publish_mural || 0,
       can_moderate_mural: user.can_moderate_mural || 0,
       token
@@ -475,25 +527,69 @@ const issueLogin = (res, user) => {
 
 app.post('/auth/login', (req, res) => {
   const { email, password } = req.body || {};
-  if (!email || !password) return res.status(400).json({ error: 'Email e senha são obrigatórios' });
+  
+  if (!email || !password) {
+    console.log('[AUTH] Login attempt with missing credentials');
+    return res.status(400).json({ error: 'Email e senha são obrigatórios' });
+  }
+  
+  console.log('[AUTH] Login attempt for email:', email);
+  
   db.get('SELECT * FROM usuarios WHERE email = ? AND ativo = 1', [email.toLowerCase()], (err, user) => {
-    if (err) return res.status(500).json({ error: 'Erro interno do servidor' });
-    if (!user || !bcrypt.compareSync(String(password), user.senha)) return res.status(401).json({ error: 'Credenciais inválidas' });
+    if (err) {
+      console.error('[AUTH] Database error during login:', err);
+      return res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+    
+    if (!user) {
+      console.log('[AUTH] User not found:', email);
+      return res.status(401).json({ error: 'Email não encontrado ou usuário inativo' });
+    }
+    
+    if (!bcrypt.compareSync(String(password), user.senha)) {
+      console.log('[AUTH] Invalid password for user:', email);
+      return res.status(401).json({ error: 'Senha incorreta' });
+    }
+    
+    console.log('[AUTH] Login successful for:', email);
     issueLogin(res, user);
   });
 });
 
-app.post('/login-admin', (req, res) => {
+// Alias route for admin login
+app.post('/api/auth/login', (req, res) => {
   const { email, password } = req.body || {};
-  if (!email || !password) return res.status(400).json({ error: 'Email e senha são obrigatórios' });
+  
+  if (!email || !password) {
+    console.log('[AUTH] API Login attempt with missing credentials');
+    return res.status(400).json({ error: 'Email e senha são obrigatórios' });
+  }
+  
+  console.log('[AUTH] API Login attempt for email:', email);
+  
   db.get('SELECT * FROM usuarios WHERE email = ? AND ativo = 1', [email.toLowerCase()], (err, user) => {
-    if (err) return res.status(500).json({ error: 'Erro interno do servidor' });
-    if (!user || !bcrypt.compareSync(String(password), user.senha)) return res.status(401).json({ error: 'Credenciais inválidas' });
+    if (err) {
+      console.error('[AUTH] API Database error during login:', err);
+      return res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+    
+    if (!user) {
+      console.log('[AUTH] API User not found:', email);
+      return res.status(401).json({ error: 'Email não encontrado ou usuário inativo' });
+    }
+    
+    if (!bcrypt.compareSync(String(password), user.senha)) {
+      console.log('[AUTH] API Invalid password for user:', email);
+      return res.status(401).json({ error: 'Senha incorreta' });
+    }
+    
+    console.log('[AUTH] API Login successful for:', email);
     issueLogin(res, user);
   });
 });
 
 app.post('/auth/logout', (_req, res) => { res.clearCookie('token'); res.json({ message: 'Logout successful' }); });
+app.post('/api/auth/logout', (_req, res) => { res.clearCookie('token'); res.json({ message: 'Logout successful' }); });
 
 // ======================
 // Me (PATCH #4 — robusto + corrige DB)
@@ -503,14 +599,24 @@ app.get('/api/me', authenticateToken, (req, res) => {
     'SELECT id, nome, email, setor, role, can_publish_mural, can_moderate_mural, pontos_gamificacao FROM usuarios WHERE id = ?',
     [req.user.id],
     (err, user) => {
-      if (err || !user) return res.status(404).json({ error: 'User not found' });
+      if (err) {
+        console.error('[ME] Database error:', err);
+        return res.status(500).json({ error: 'Erro interno do servidor' });
+      }
+      
+      if (!user) {
+        console.log('[ME] User not found in database:', req.user.id);
+        return res.status(404).json({ error: 'Usuário não encontrado' });
+      }
 
       const name = computeName(user.email, user.nome, req.user?.name);
       ensureDbName(user.id, user.nome, name); // auto-fix no banco
 
       res.json({ user: {
         id: user.id, name, email: user.email, setor: user.setor, sector: user.setor,
-        role: user.role, can_publish_mural: user.can_publish_mural || 0, 
+        role: user.role, 
+        picture: user.avatar_url,
+        can_publish_mural: user.can_publish_mural || 0, 
         can_moderate_mural: user.can_moderate_mural || 0,
         pontos_gamificacao: user.pontos_gamificacao || 0
       }});
@@ -914,9 +1020,35 @@ app.get('/api/config', (_req, res) => {
   res.json({
     googleEnabled: !!(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET),
     environment: NODE_ENV,
-    version: '1.0.0'
+    version: '1.0.0',
+    googleCallbackUrl: GOOGLE_CALLBACK_URL,
+    frontendUrl: WEB_URL
   });
 });
+
+// Test endpoint for checking auth
+app.get('/api/test-auth', authenticateToken, (req, res) => {
+  res.json({
+    authenticated: true,
+    user: req.user,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Debug endpoint (development only)
+if (NODE_ENV === 'development') {
+  app.get('/api/debug', (req, res) => {
+    res.json({
+      NODE_ENV,
+      WEB_URL,
+      GOOGLE_CONFIGURED: !!(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET),
+      JWT_SECRET_SET: !!JWT_SECRET,
+      timestamp: new Date().toISOString(),
+      cookies: req.cookies,
+      headers: req.headers
+    });
+  });
+}
 
 // Serve static files from dist in production
 if (NODE_ENV === 'production') {
@@ -928,19 +1060,30 @@ if (NODE_ENV === 'production') {
   // Catch-all handler for SPA
   app.get('*', (req, res, next) => {
     // Skip API routes
-    if (req.path.startsWith('/api') || req.path.startsWith('/auth')) {
+    if (req.path.startsWith('/api/') || 
+        req.path.startsWith('/auth/') || 
+        req.path.startsWith('/healthz') ||
+        req.path.startsWith('/login-admin')) {
       return next();
     }
     
     res.sendFile(path.join(distPath, 'index.html'));
   });
 }
-app.use('/api', (req, res) => {
+
+// 404 handlers - must be after all other routes
+app.use('/api/*', (req, res) => {
+  console.log('[404] API route not found:', req.method, req.path);
+  res.status(404).json({ error: 'API endpoint not found', path: req.path, method: req.method });
+});
+
+app.use('/auth/*', (req, res) => {
+  console.log('[404] Auth route not found:', req.method, req.path);
   res.status(404).json({ error: 'API endpoint not found', path: req.path, method: req.method });
 });
 
 app.use((err, _req, res, _next) => {
-  console.error('[Server error]', err);
+  console.error('[SERVER ERROR]', err?.stack || err?.message || err);
   res.status(500).json({ error: 'Internal server error' });
 });
 

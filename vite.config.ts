@@ -16,6 +16,18 @@ export default defineConfig(({ mode }) => {
     secure: false,
     timeout: 60000, // Increased timeout
     followRedirects: true,
+    ws: true, // Enable WebSocket proxying
+    configure: (proxy, options) => {
+      proxy.on('error', (err) => {
+        console.error('[VITE-PROXY] Proxy error:', err?.code || err?.message || err)
+      })
+      proxy.on('proxyReq', (proxyReq, req, res) => {
+        console.log(`[VITE-PROXY] → ${req.method} ${req.url}`)
+      })
+      proxy.on('proxyRes', (proxyRes, req, res) => {
+        console.log(`[VITE-PROXY] ← ${req.method} ${req.url} [${proxyRes.statusCode}]`)
+      })
+    },
     onError: (err: any) => {
       console.error('[VITE-PROXY] Error:', err?.code || err?.message || err)
     },
@@ -24,18 +36,24 @@ export default defineConfig(({ mode }) => {
       if (req.headers.cookie) {
         proxyReq.setHeader('cookie', req.headers.cookie)
       }
-      console.log(`[VITE-PROXY] ${req.method} ${req.url} -> ${proxyReq.getHeader('host')}${req.url}`)
+      
+      // Forward authorization headers
+      if (req.headers.authorization) {
+        proxyReq.setHeader('authorization', req.headers.authorization)
+      }
     },
     onProxyRes: (proxyRes: any, req: any) => {
-      // Log response for debugging
-      console.log(`[VITE-PROXY] ${req.method} ${req.url} <- ${proxyRes.statusCode}`)
-      
       // Handle redirects properly
       if (proxyRes.statusCode >= 300 && proxyRes.statusCode < 400) {
         const location = proxyRes.headers.location;
         if (location) {
           console.log(`[VITE-PROXY] Redirect to: ${location}`)
         }
+      }
+      
+      // Handle cookies properly
+      if (proxyRes.headers['set-cookie']) {
+        console.log(`[VITE-PROXY] Setting cookies from backend`)
       }
     }
   }
@@ -61,15 +79,16 @@ export default defineConfig(({ mode }) => {
           // Don't rewrite auth paths
         },
 
-        // Login admin endpoint
-        '/login-admin': { ...commonProxyOpts },
-
         // Health check endpoints
         '/healthz': { ...commonProxyOpts },
+        
+        // Config endpoint
+        '/config': { ...commonProxyOpts },
       },
     },
     build: {
       sourcemap: true,
+      outDir: 'dist',
       rollupOptions: {
         onwarn: (warning, defaultHandler) => {
           if (warning.code === 'SOURCEMAP_ERROR') return
