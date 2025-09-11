@@ -61,7 +61,54 @@ const db = new sqlite3.Database('./database.db', (err) => {
           role TEXT NOT NULL DEFAULT 'colaborador',
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
-      `);
+      `, (err) => {
+        if (err) {
+          console.error('Error creating usuarios table:', err);
+        } else {
+          console.log('Usuarios table ready');
+          
+          // Insert admin users after table is created
+          const saltRounds = 10;
+          
+          // Create admin-ti user
+          bcrypt.hash('admin123', saltRounds, (err, hash) => {
+            if (err) {
+              console.error('Error hashing password for admin-ti:', err);
+              return;
+            }
+
+            db.run(`
+              INSERT OR IGNORE INTO usuarios (usuario, nome, senha_hash, setor, role)
+              VALUES (?, ?, ?, ?, ?)
+            `, ['admin-ti', 'Administrador TI', hash, 'TI', 'admin'], (err) => {
+              if (err) {
+                console.error('Error creating admin-ti user:', err);
+              } else {
+                console.log('Admin-TI user ready');
+              }
+            });
+          });
+
+          // Create admin-rh user
+          bcrypt.hash('admin123', saltRounds, (err, hash) => {
+            if (err) {
+              console.error('Error hashing password for admin-rh:', err);
+              return;
+            }
+
+            db.run(`
+              INSERT OR IGNORE INTO usuarios (usuario, nome, senha_hash, setor, role)
+              VALUES (?, ?, ?, ?, ?)
+            `, ['admin-rh', 'Administrador RH', hash, 'RH', 'admin'], (err) => {
+              if (err) {
+                console.error('Error creating admin-rh user:', err);
+              } else {
+                console.log('Admin-RH user ready');
+              }
+            });
+          });
+        }
+      });
 
       // Create authorized_emails table for Google OAuth
       db.run(`
@@ -74,25 +121,6 @@ const db = new sqlite3.Database('./database.db', (err) => {
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
       `);
-
-      // Insert admin users if they don't exist
-      const saltRounds = 10;
-      bcrypt.hash('admin123', saltRounds, (err, hash) => {
-        if (err) {
-          console.error('Error hashing password:', err);
-          return;
-        }
-
-        db.run(`
-          INSERT OR IGNORE INTO usuarios (usuario, nome, senha_hash, setor, role)
-          VALUES (?, ?, ?, ?, ?)
-        `, ['admin-ti', 'Administrador TI', hash, 'TI', 'admin']);
-
-        db.run(`
-          INSERT OR IGNORE INTO usuarios (usuario, nome, senha_hash, setor, role)
-          VALUES (?, ?, ?, ?, ?)
-        `, ['admin-rh', 'Administrador RH', hash, 'RH', 'admin']);
-      });
     });
   }
 });
@@ -162,14 +190,16 @@ app.get('/api/config', (req, res) => {
 app.post('/api/login-admin', async (req, res) => {
   try {
     const { usuario, senha } = req.body;
+    console.log('[LOGIN] Attempt for user:', usuario);
 
     if (!usuario || !senha) {
+      console.log('[LOGIN] Missing credentials');
       return res.status(400).json({ error: 'Usuário e senha são obrigatórios' });
     }
 
     // Find user in database
     db.get(
-      "SELECT * FROM usuarios WHERE usuario = ? AND role = 'admin'",
+      "SELECT * FROM usuarios WHERE usuario = ?",
       [usuario],
       async (err, row) => {
         if (err) {
@@ -177,17 +207,38 @@ app.post('/api/login-admin', async (req, res) => {
           return res.status(500).json({ error: 'Erro interno do servidor' });
         }
 
+        console.log('[LOGIN] User found in DB:', !!row);
+        if (row) {
+          console.log('[LOGIN] User details:', { 
+            usuario: row.usuario, 
+            role: row.role, 
+            setor: row.setor,
+            hasPassword: !!row.senha_hash 
+          });
+        }
+
         if (!row) {
+          console.log('[LOGIN] User not found:', usuario);
           return res.status(401).json({ error: 'Usuário ou senha inválidos' });
+        }
+
+        // Check if user is admin
+        if (row.role !== 'admin') {
+          console.log('[LOGIN] User is not admin:', row.role);
+          return res.status(401).json({ error: 'Acesso negado. Apenas administradores podem fazer login manual.' });
         }
 
         // Verify password
         try {
           const isValidPassword = await bcrypt.compare(senha, row.senha_hash);
+          console.log('[LOGIN] Password valid:', isValidPassword);
           
           if (!isValidPassword) {
+            console.log('[LOGIN] Invalid password for user:', usuario);
             return res.status(401).json({ error: 'Usuário ou senha inválidos' });
           }
+
+          console.log('[LOGIN] Login successful for:', usuario);
 
           // Create JWT token
           const token = jwt.sign(
