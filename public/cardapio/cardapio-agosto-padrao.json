@@ -1,1 +1,313 @@
-public/cardapio/cardapio-setembro-padrao.json
+[
+    {
+        "id": "2025-09-01",
+        "dia": "Segunda-feira",
+        "prato": "Porquinho frito",
+        "acompanhamentos": [
+            "Macarrão ao alho e óleo",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "alface",
+            "pepino"
+        ],
+        "sobremesa": "Gelatina"
+    },
+    {
+        "id": "2025-09-02",
+        "dia": "Terça-feira",
+        "prato": "Frango assado",
+        "acompanhamentos": [
+            "Polenta com acém moído",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "repolho",
+            "cenoura ao vinagrete"
+        ],
+        "sobremesa": "Arroz doce moreno"
+    },
+    {
+        "id": "2025-09-03",
+        "dia": "Quarta-feira",
+        "prato": "Feijoada completa",
+        "acompanhamentos": [
+            "Mandioca com linguiça e bacon",
+            "Farofa"
+        ],
+        "saladas": [
+            "couve",
+            "vinagrete de tomate com cebola"
+        ],
+        "sobremesa": "Fruta"
+    },
+    {
+        "id": "2025-09-04",
+        "dia": "Quinta-feira",
+        "prato": "Acém bovino ao sugo",
+        "acompanhamentos": [
+            "Macarronese de legumes",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "beterraba",
+            "alface"
+        ],
+        "sobremesa": "Cuca de banana"
+    },
+    {
+        "id": "2025-09-05",
+        "dia": "Sexta-feira",
+        "prato": "Frango ao molho teriaki",
+        "acompanhamentos": [
+            "Purê de abóbora com queijo",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "repolho chinês",
+            "almeirão"
+        ],
+        "sobremesa": "Sagu com frutas"
+    },
+    {
+        "id": "2025-09-08",
+        "dia": "Segunda-feira",
+        "prato": "Bisteca de porco acebolada",
+        "acompanhamentos": [
+            "Ovo frito",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "repolho cremoso",
+            "tomate com pepino"
+        ],
+        "sobremesa": "Gelatina"
+    },
+    {
+        "id": "2025-09-09",
+        "dia": "Terça-feira",
+        "prato": "Strogonoff de frango",
+        "acompanhamentos": [
+            "Batata palha",
+            "Macarrão na manteiga e alho",
+            "Arroz e feijão"
+        ],
+        "saladas": [
+            "chuchu",
+            "mix de folhas"
+        ],
+        "sobremesa": "Paçoca"
+    },
+    {
+        "id": "2025-09-10",
+        "dia": "Quarta-feira",
+        "prato": "Picadinho bovino com batata",
+        "acompanhamentos": [
+            "Farofa de linguiça e couve",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "salada tropical"
+        ],
+        "sobremesa": "Fruta"
+    },
+    {
+        "id": "2025-09-11",
+        "dia": "Quinta-feira",
+        "prato": "Frango de panela",
+        "acompanhamentos": [
+            "Escondidinho de polenta com queijo",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "mix de legumes",
+            "alface"
+        ],
+        "sobremesa": "Gelatina com leite condensado"
+    },
+    {
+        "id": "2025-09-12",
+        "dia": "Sexta-feira",
+        "prato": "Pernil assado ao barbecue",
+        "acompanhamentos": [
+            "Sopa de mandioca com bacon",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "tomate com cebola",
+            "acelga com abacaxi"
+        ],
+        "sobremesa": "Maria mole"
+    },
+    {
+        "id": "2025-09-15",
+        "dia": "Segunda-feira",
+        "prato": "Filé de frango acebolado",
+        "acompanhamentos": [
+            "Banana à milanesa",
+            "Macarrão ao alho e óleo",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "alface",
+            "pepino"
+        ],
+        "sobremesa": "Gelatina"
+    },
+    {
+        "id": "2025-09-16",
+        "dia": "Terça-feira",
+        "prato": "Filé de peixe empanado",
+        "acompanhamentos": [
+            "Batatinhas ao pomodoro",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "cenoura com creme",
+            "almeirão"
+        ],
+        "sobremesa": "Sagu de uva"
+    },
+    {
+        "id": "2025-09-17",
+        "dia": "Quarta-feira",
+        "prato": "Frango ao pizzaiolo",
+        "acompanhamentos": [
+            "Macarronese",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "chicória",
+            "tomate"
+        ],
+        "sobremesa": "Fruta"
+    },
+    {
+        "id": "2025-09-18",
+        "dia": "Quinta-feira",
+        "prato": "Bisteca de porco",
+        "acompanhamentos": [
+            "Tutu à mineira",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "folhas com frutas"
+        ],
+        "sobremesa": "Bolo de chocolate"
+    },
+    {
+        "id": "2025-09-19",
+        "dia": "Sexta-feira",
+        "prato": "Strogonoff bovino",
+        "acompanhamentos": [
+            "Batata palha",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "repolho",
+            "cenoura com gergelim preto"
+        ],
+        "sobremesa": "Gelatina com creme"
+    },
+    {
+        "id": "2025-09-22",
+        "dia": "Segunda-feira",
+        "prato": "Linguiça ao sugo",
+        "acompanhamentos": [
+            "Ovo frito",
+            "Macarrão bolonhesa",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "folhas",
+            "tomate"
+        ],
+        "sobremesa": "Paçoca"
+    },
+    {
+        "id": "2025-09-23",
+        "dia": "Terça-feira",
+        "prato": "Frango empanado",
+        "acompanhamentos": [
+            "Purê de batatas",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "repolho com gengibre",
+            "pepino"
+        ],
+        "sobremesa": "Arroz doce com canela"
+    },
+    {
+        "id": "2025-09-24",
+        "dia": "Quarta-feira",
+        "prato": "Vaca atolada",
+        "acompanhamentos": [
+            "Farofa de ovo",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "vinagrete de tomate"
+        ],
+        "sobremesa": "Fruta"
+    },
+    {
+        "id": "2025-09-25",
+        "dia": "Quinta-feira",
+        "prato": "Porco xadrez",
+        "acompanhamentos": [
+            "Macarrão com bacon e ervilhas",
+            "Enroladinho de salsicha",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "acelga"
+        ],
+        "sobremesa": "Manjar com calda"
+    },
+    {
+        "id": "2025-09-26",
+        "dia": "Sexta-feira",
+        "prato": "Cardápio especial",
+        "acompanhamentos": [
+            "Lagarto ao molho madeira",
+            "Arroz à grega",
+            "Arroz branco e feijão",
+            "Salada de folhas com frutas e tomate cereja",
+            "Molho para salada"
+        ],
+        "saladas": [
+            "salada de folhas"
+        ],
+        "sobremesa": "Pavê de beijinho"
+    },
+    {
+        "id": "2025-09-29",
+        "dia": "Segunda-feira",
+        "prato": "Frango acebolado",
+        "acompanhamentos": [
+            "Polenta com queijo",
+            "Macarrão com legumes",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "tomate com pepino",
+            "repolho"
+        ],
+        "sobremesa": "Gelatina"
+    },
+    {
+        "id": "2025-09-30",
+        "dia": "Terça-feira",
+        "prato": "Cubos de pernil com cebola",
+        "acompanhamentos": [
+            "Batata rústica ao bechamel",
+            "Farofa de linguiça",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "folhas com frutas"
+        ],
+        "sobremesa": "Canjica"
+    }
+]
