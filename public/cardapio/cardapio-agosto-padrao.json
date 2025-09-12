@@ -1,303 +1,313 @@
 [
     {
-        "id": "2025-08-01",
-        "dia": "Sexta-feira",
-        "data": "01/08/2025",
-        "prato": "Iscas bovinas na chapa aceboladas",
-        "descricao": "Macarrão ao molho pomodoro",
-        "proteina": "Iscas bovinas",
-        "acompanhamentos": [
-            "Arroz e feijão",
-            "Alface",
-            "Chuchu com alho frito"
-        ],
-        "sobremesa": "Sagu de uva"
-    },
-    {
-        "id": "2025-08-04",
+        "id": "2025-09-01",
         "dia": "Segunda-feira",
-        "data": "04/08/2025",
-        "prato": "Frango empanado",
-        "descricao": "Polenta com ervilha e queijo",
-        "proteina": "Frango empanado",
+        "prato": "Porquinho frito",
         "acompanhamentos": [
-            "Batata rústica",
-            "Arroz e feijão",
-            "Almeirão",
-            "Tomate"
+            "Macarrão ao alho e óleo",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "alface",
+            "pepino"
         ],
         "sobremesa": "Gelatina"
     },
     {
-        "id": "2025-08-05",
+        "id": "2025-09-02",
         "dia": "Terça-feira",
-        "data": "05/08/2025",
-        "prato": "Porco xadrez",
-        "descricao": "Torta de brócolis",
-        "proteina": "Porco",
+        "prato": "Frango assado",
         "acompanhamentos": [
-            "Macarronese",
-            "Arroz e feijão",
-            "Repolho chinês",
-            "Pepino"
+            "Polenta com acém moído",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "repolho",
+            "cenoura ao vinagrete"
         ],
         "sobremesa": "Arroz doce moreno"
     },
     {
-        "id": "2025-08-06",
+        "id": "2025-09-03",
         "dia": "Quarta-feira",
-        "data": "06/08/2025",
-        "prato": "Strogonoff bovino",
-        "descricao": "Batata palha",
-        "proteina": "Carne bovina",
-        "acompanhamentos": [
-            "Arroz e feijão",
-            "Alface",
-            "Mix de legumes"
-        ],
-        "sobremesa": "Gelado de limão"
-    },
-    {
-        "id": "2025-08-07",
-        "dia": "Quinta-feira",
-        "data": "07/08/2025",
-        "prato": "Frango assado",
-        "descricao": "Refogado de legumes com molho",
-        "proteina": "Frango assado",
-        "acompanhamentos": [
-            "Arroz e feijão",
-            "Acelga c/ abacaxi",
-            "Beterraba"
-        ],
-        "sobremesa": "Bolo de chocolate"
-    },
-    {
-        "id": "2025-08-08",
-        "dia": "Sexta-feira",
-        "data": "08/08/2025",
         "prato": "Feijoada completa",
-        "descricao": "Mandioca com linguiça",
-        "proteina": "Feijoada",
         "acompanhamentos": [
-            "Farofa de couve",
-            "Arroz branco",
-            "Vinagrete de tomate com cebola"
+            "Mandioca com linguiça e bacon",
+            "Farofa"
+        ],
+        "saladas": [
+            "couve",
+            "vinagrete de tomate com cebola"
         ],
         "sobremesa": "Fruta"
     },
     {
-        "id": "2025-08-11",
-        "dia": "Segunda-feira",
-        "data": "11/08/2025",
-        "prato": "Linguiça assada",
-        "descricao": "Ovo frito",
-        "proteina": "Linguiça",
+        "id": "2025-09-04",
+        "dia": "Quinta-feira",
+        "prato": "Acém bovino ao sugo",
         "acompanhamentos": [
-            "Macarrão c/ molho branco e bacon",
-            "Arroz e feijão",
-            "Pepino",
-            "Repolho"
+            "Macarronese de legumes",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "beterraba",
+            "alface"
+        ],
+        "sobremesa": "Cuca de banana"
+    },
+    {
+        "id": "2025-09-05",
+        "dia": "Sexta-feira",
+        "prato": "Frango ao molho teriaki",
+        "acompanhamentos": [
+            "Purê de abóbora com queijo",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "repolho chinês",
+            "almeirão"
+        ],
+        "sobremesa": "Sagu com frutas"
+    },
+    {
+        "id": "2025-09-08",
+        "dia": "Segunda-feira",
+        "prato": "Bisteca de porco acebolada",
+        "acompanhamentos": [
+            "Ovo frito",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "repolho cremoso",
+            "tomate com pepino"
         ],
         "sobremesa": "Gelatina"
     },
     {
-        "id": "2025-08-12",
+        "id": "2025-09-09",
         "dia": "Terça-feira",
-        "data": "12/08/2025",
-        "prato": "Filé de frango ao molho de mostarda",
-        "descricao": "Escondidinho de acém moído",
-        "proteina": "Frango",
+        "prato": "Strogonoff de frango",
         "acompanhamentos": [
-            "Arroz e feijão",
-            "Mix de folhas",
-            "Abóbora c/ alho"
+            "Batata palha",
+            "Macarrão na manteiga e alho",
+            "Arroz e feijão"
         ],
-        "sobremesa": "Gelado de uva"
-    },
-    {
-        "id": "2025-08-13",
-        "dia": "Quarta-feira",
-        "data": "13/08/2025",
-        "prato": "Vaca atolada",
-        "descricao": "Vinagrete de tomate c/ cebola e pimentão",
-        "proteina": "Carne bovina",
-        "acompanhamentos": [
-            "Farofa de linguiça",
-            "Arroz e feijão",
-            "Salada de couve ao alho"
-        ],
-        "sobremesa": "Fruta"
-    },
-    {
-        "id": "2025-08-14",
-        "dia": "Quinta-feira",
-        "data": "14/08/2025",
-        "prato": "Frango de panela",
-        "descricao": "Polenta com molho e queijo",
-        "proteina": "Frango",
-        "acompanhamentos": [
-            "Arroz e feijão",
-            "Almeirão",
-            "Legumes mistos"
-        ],
-        "sobremesa": "Canjica"
-    },
-    {
-        "id": "2025-08-15",
-        "dia": "Sexta-feira",
-        "data": "15/08/2025",
-        "prato": "Pernil assado",
-        "descricao": "Batata doce com bacon, calabresa e cebola",
-        "proteina": "Pernil",
-        "acompanhamentos": [
-            "Repolho tropicano",
-            "Arroz e feijão",
-            "Vinagrete de cenoura",
-            "Alface"
+        "saladas": [
+            "chuchu",
+            "mix de folhas"
         ],
         "sobremesa": "Paçoca"
     },
     {
-        "id": "2025-08-18",
-        "dia": "Segunda-feira",
-        "data": "18/08/2025",
-        "prato": "Bisteca de porco",
-        "descricao": "Ovo frito",
-        "proteina": "Bisteca",
+        "id": "2025-09-10",
+        "dia": "Quarta-feira",
+        "prato": "Picadinho bovino com batata",
         "acompanhamentos": [
-            "Macarrão ao alho",
-            "Arroz e feijão",
-            "Pepino",
-            "Tomate"
+            "Farofa de linguiça e couve",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "salada tropical"
+        ],
+        "sobremesa": "Fruta"
+    },
+    {
+        "id": "2025-09-11",
+        "dia": "Quinta-feira",
+        "prato": "Frango de panela",
+        "acompanhamentos": [
+            "Escondidinho de polenta com queijo",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "mix de legumes",
+            "alface"
+        ],
+        "sobremesa": "Gelatina com leite condensado"
+    },
+    {
+        "id": "2025-09-12",
+        "dia": "Sexta-feira",
+        "prato": "Pernil assado ao barbecue",
+        "acompanhamentos": [
+            "Sopa de mandioca com bacon",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "tomate com cebola",
+            "acelga com abacaxi"
+        ],
+        "sobremesa": "Maria mole"
+    },
+    {
+        "id": "2025-09-15",
+        "dia": "Segunda-feira",
+        "prato": "Filé de frango acebolado",
+        "acompanhamentos": [
+            "Banana à milanesa",
+            "Macarrão ao alho e óleo",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "alface",
+            "pepino"
         ],
         "sobremesa": "Gelatina"
     },
     {
-        "id": "2025-08-19",
+        "id": "2025-09-16",
         "dia": "Terça-feira",
-        "data": "19/08/2025",
-        "prato": "Frango frito",
-        "descricao": "Purê de batatas",
-        "proteina": "Frango",
+        "prato": "Filé de peixe empanado",
         "acompanhamentos": [
-            "Refogado de legumes",
-            "Arroz e feijão",
-            "Chicória",
-            "Frutas"
+            "Batatinhas ao pomodoro",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "cenoura com creme",
+            "almeirão"
+        ],
+        "sobremesa": "Sagu de uva"
+    },
+    {
+        "id": "2025-09-17",
+        "dia": "Quarta-feira",
+        "prato": "Frango ao pizzaiolo",
+        "acompanhamentos": [
+            "Macarronese",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "chicória",
+            "tomate"
+        ],
+        "sobremesa": "Fruta"
+    },
+    {
+        "id": "2025-09-18",
+        "dia": "Quinta-feira",
+        "prato": "Bisteca de porco",
+        "acompanhamentos": [
+            "Tutu à mineira",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "folhas com frutas"
+        ],
+        "sobremesa": "Bolo de chocolate"
+    },
+    {
+        "id": "2025-09-19",
+        "dia": "Sexta-feira",
+        "prato": "Strogonoff bovino",
+        "acompanhamentos": [
+            "Batata palha",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "repolho",
+            "cenoura com gergelim preto"
+        ],
+        "sobremesa": "Gelatina com creme"
+    },
+    {
+        "id": "2025-09-22",
+        "dia": "Segunda-feira",
+        "prato": "Linguiça ao sugo",
+        "acompanhamentos": [
+            "Ovo frito",
+            "Macarrão bolonhesa",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "folhas",
+            "tomate"
+        ],
+        "sobremesa": "Paçoca"
+    },
+    {
+        "id": "2025-09-23",
+        "dia": "Terça-feira",
+        "prato": "Frango empanado",
+        "acompanhamentos": [
+            "Purê de batatas",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "repolho com gengibre",
+            "pepino"
+        ],
+        "sobremesa": "Arroz doce com canela"
+    },
+    {
+        "id": "2025-09-24",
+        "dia": "Quarta-feira",
+        "prato": "Vaca atolada",
+        "acompanhamentos": [
+            "Farofa de ovo",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "vinagrete de tomate"
+        ],
+        "sobremesa": "Fruta"
+    },
+    {
+        "id": "2025-09-25",
+        "dia": "Quinta-feira",
+        "prato": "Porco xadrez",
+        "acompanhamentos": [
+            "Macarrão com bacon e ervilhas",
+            "Enroladinho de salsicha",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "acelga"
         ],
         "sobremesa": "Manjar com calda"
     },
     {
-        "id": "2025-08-20",
-        "dia": "Quarta-feira",
-        "data": "20/08/2025",
-        "prato": "Carne de panela",
-        "descricao": "Bolinho de arroz com legumes",
-        "proteina": "Carne bovina",
-        "acompanhamentos": [
-            "Arroz e feijão",
-            "Maionese de chuchu",
-            "Almeirão"
-        ],
-        "sobremesa": "Fruta"
-    },
-    {
-        "id": "2025-08-21",
-        "dia": "Quinta-feira",
-        "data": "21/08/2025",
-        "prato": "Filé de Frango à Parmegiana",
-        "descricao": "Purê de batatas",
-        "proteina": "Frango",
-        "acompanhamentos": [
-            "Arroz e feijão",
-            "Tabule",
-            "Rúcula"
-        ],
-        "sobremesa": "Gelado de morango"
-    },
-    {
-        "id": "2025-08-22",
+        "id": "2025-09-26",
         "dia": "Sexta-feira",
-        "data": "22/08/2025",
-        "prato": "Feijoada completa",
-        "descricao": "Ovo frito",
-        "proteina": "Feijoada",
+        "prato": "Cardápio especial",
         "acompanhamentos": [
-            "Farofa de couve",
-            "Arroz branco",
-            "Vinagrete de tomate com cebola"
+            "Lagarto ao molho madeira",
+            "Arroz à grega",
+            "Arroz branco e feijão",
+            "Salada de folhas com frutas e tomate cereja",
+            "Molho para salada"
         ],
-        "sobremesa": "Fruta"
+        "saladas": [
+            "salada de folhas"
+        ],
+        "sobremesa": "Pavê de beijinho"
     },
     {
-        "id": "2025-08-25",
+        "id": "2025-09-29",
         "dia": "Segunda-feira",
-        "data": "25/08/2025",
-        "prato": "Frango grelhado acebolado",
-        "descricao": "Macarrão com legumes",
-        "proteina": "Frango",
+        "prato": "Frango acebolado",
         "acompanhamentos": [
-            "Arroz e feijão",
-            "Acelga ao alho",
-            "Pepino"
+            "Polenta com queijo",
+            "Macarrão com legumes",
+            "Arroz branco e feijão"
+        ],
+        "saladas": [
+            "tomate com pepino",
+            "repolho"
         ],
         "sobremesa": "Gelatina"
     },
     {
-        "id": "2025-08-26",
+        "id": "2025-09-30",
         "dia": "Terça-feira",
-        "data": "26/08/2025",
-        "prato": "Porquinho frito",
-        "descricao": "Tutu a mineira",
-        "proteina": "Carne suína",
+        "prato": "Cubos de pernil com cebola",
         "acompanhamentos": [
-            "Arroz e feijão",
-            "Repolho chinês",
-            "Rúcula"
+            "Batata rústica ao bechamel",
+            "Farofa de linguiça",
+            "Arroz branco e feijão"
         ],
-        "sobremesa": "Bolo de laranja"
-    },
-    {
-        "id": "2025-08-27",
-        "dia": "Quarta-feira",
-        "data": "27/08/2025",
-        "prato": "Filé de peixe empanado",
-        "descricao": "Mandioca ao alho",
-        "proteina": "Peixe",
-        "acompanhamentos": [
-            "Arroz e feijão",
-            "Alface",
-            "Beterraba"
+        "saladas": [
+            "folhas com frutas"
         ],
-        "sobremesa": "Fruta"
-    },
-    {
-        "id": "2025-08-28",
-        "dia": "Quinta-feira",
-        "data": "28/08/2025",
-        "prato": "Frango assado",
-        "descricao": "Salada de ovos com cebola",
-        "proteina": "Frango",
-        "acompanhamentos": [
-            "Canjiquinha de linguiça",
-            "Arroz e feijão",
-            "Brócolis com cenoura",
-            "Alface"
-        ],
-        "sobremesa": "Suspiro"
-    },
-    {
-        "id": "2025-08-29",
-        "dia": "Sexta-feira",
-        "data": "29/08/2025",
-        "prato": "CARDÁPIO ESPECIAL",
-        "descricao": "Bife ao molho roti, Escondidinho de mandioca com costela, salpicão de presunto",
-        "proteina": "Bife e costela",
-        "acompanhamentos": [
-            "Arroz à grega",
-            "Feijão",
-            "Salada de folhas com tomate cereja"
-        ],
-        "sobremesa": "Doce de leite caseiro"
+        "sobremesa": "Canjica"
     }
 ]
