@@ -2,12 +2,13 @@
     {
         "id": "2025-09-01",
         "dia": "Segunda-feira",
+        "data": "01/09/2025",
         "prato": "Porquinho frito",
+        "descricao": "Macarrão ao alho e óleo",
+        "proteina": "Porquinho frito",
         "acompanhamentos": [
             "Macarrão ao alho e óleo",
-            "Arroz branco e feijão"
-        ],
-        "saladas": [
+            "Arroz branco e feijão",
             "alface",
             "pepino"
         ],
@@ -16,12 +17,13 @@
     {
         "id": "2025-09-02",
         "dia": "Terça-feira",
+        "data": "02/09/2025",
         "prato": "Frango assado",
+        "descricao": "Polenta com acém moído",
+        "proteina": "Frango assado",
         "acompanhamentos": [
             "Polenta com acém moído",
-            "Arroz branco e feijão"
-        ],
-        "saladas": [
+            "Arroz branco e feijão",
             "repolho",
             "cenoura ao vinagrete"
         ],
@@ -30,12 +32,13 @@
     {
         "id": "2025-09-03",
         "dia": "Quarta-feira",
+        "data": "03/09/2025",
         "prato": "Feijoada completa",
+        "descricao": "Mandioca com linguiça e bacon",
+        "proteina": "Feijoada completa",
         "acompanhamentos": [
             "Mandioca com linguiça e bacon",
-            "Farofa"
-        ],
-        "saladas": [
+            "Farofa",
             "couve",
             "vinagrete de tomate com cebola"
         ],
@@ -44,12 +47,13 @@
     {
         "id": "2025-09-04",
         "dia": "Quinta-feira",
+        "data": "04/09/2025",
         "prato": "Acém bovino ao sugo",
+        "descricao": "Macarronese de legumes",
+        "proteina": "Acém bovino ao sugo",
         "acompanhamentos": [
             "Macarronese de legumes",
-            "Arroz branco e feijão"
-        ],
-        "saladas": [
+            "Arroz branco e feijão",
             "beterraba",
             "alface"
         ],
@@ -58,12 +62,13 @@
     {
         "id": "2025-09-05",
         "dia": "Sexta-feira",
+        "data": "05/09/2025",
         "prato": "Frango ao molho teriaki",
+        "descricao": "Purê de abóbora com queijo",
+        "proteina": "Frango ao molho teriaki",
         "acompanhamentos": [
             "Purê de abóbora com queijo",
-            "Arroz branco e feijão"
-        ],
-        "saladas": [
+            "Arroz branco e feijão",
             "repolho chinês",
             "almeirão"
         ],
@@ -72,12 +77,13 @@
     {
         "id": "2025-09-08",
         "dia": "Segunda-feira",
+        "data": "08/09/2025",
         "prato": "Bisteca de porco acebolada",
+        "descricao": "Ovo frito",
+        "proteina": "Bisteca de porco acebolada",
         "acompanhamentos": [
             "Ovo frito",
-            "Arroz branco e feijão"
-        ],
-        "saladas": [
+            "Arroz branco e feijão",
             "repolho cremoso",
             "tomate com pepino"
         ],
@@ -86,13 +92,14 @@
     {
         "id": "2025-09-09",
         "dia": "Terça-feira",
+        "data": "09/09/2025",
         "prato": "Strogonoff de frango",
+        "descricao": "Batata palha",
+        "proteina": "Strogonoff de frango",
         "acompanhamentos": [
             "Batata palha",
             "Macarrão na manteiga e alho",
-            "Arroz e feijão"
-        ],
-        "saladas": [
+            "Arroz e feijão",
             "chuchu",
             "mix de folhas"
         ],
@@ -101,12 +108,13 @@
     {
         "id": "2025-09-10",
         "dia": "Quarta-feira",
+        "data": "10/09/2025",
         "prato": "Picadinho bovino com batata",
+        "descricao": "Farofa de linguiça e couve",
+        "proteina": "Picadinho bovino com batata",
         "acompanhamentos": [
             "Farofa de linguiça e couve",
-            "Arroz branco e feijão"
-        ],
-        "saladas": [
+            "Arroz branco e feijão",
             "salada tropical"
         ],
         "sobremesa": "Fruta"
@@ -114,12 +122,13 @@
     {
         "id": "2025-09-11",
         "dia": "Quinta-feira",
+        "data": "11/09/2025",
         "prato": "Frango de panela",
+        "descricao": "Escondidinho de polenta com queijo",
+        "proteina": "Frango de panela",
         "acompanhamentos": [
             "Escondidinho de polenta com queijo",
-            "Arroz branco e feijão"
-        ],
-        "saladas": [
+            "Arroz branco e feijão",
             "mix de legumes",
             "alface"
         ],
@@ -128,12 +137,13 @@
     {
         "id": "2025-09-12",
         "dia": "Sexta-feira",
+        "data": "12/09/2025",
         "prato": "Pernil assado ao barbecue",
+        "descricao": "Sopa de mandioca com bacon",
+        "proteina": "Pernil assado ao barbecue",
         "acompanhamentos": [
             "Sopa de mandioca com bacon",
-            "Arroz branco e feijão"
-        ],
-        "saladas": [
+            "Arroz branco e feijão",
             "tomate com cebola",
             "acelga com abacaxi"
         ],
@@ -142,13 +152,14 @@
     {
         "id": "2025-09-15",
         "dia": "Segunda-feira",
+        "data": "15/09/2025",
         "prato": "Filé de frango acebolado",
+        "descricao": "Banana à milanesa",
+        "proteina": "Filé de frango acebolado",
         "acompanhamentos": [
             "Banana à milanesa",
             "Macarrão ao alho e óleo",
-            "Arroz branco e feijão"
-        ],
-        "saladas": [
+            "Arroz branco e feijão",
             "alface",
             "pepino"
         ],
@@ -157,12 +168,13 @@
     {
         "id": "2025-09-16",
         "dia": "Terça-feira",
+        "data": "16/09/2025",
         "prato": "Filé de peixe empanado",
+        "descricao": "Batatinhas ao pomodoro",
+        "proteina": "Filé de peixe empanado",
         "acompanhamentos": [
             "Batatinhas ao pomodoro",
-            "Arroz branco e feijão"
-        ],
-        "saladas": [
+            "Arroz branco e feijão",
             "cenoura com creme",
             "almeirão"
         ],
@@ -171,12 +183,13 @@
     {
         "id": "2025-09-17",
         "dia": "Quarta-feira",
+        "data": "17/09/2025",
         "prato": "Frango ao pizzaiolo",
+        "descricao": "Macarronese",
+        "proteina": "Frango ao pizzaiolo",
         "acompanhamentos": [
             "Macarronese",
-            "Arroz branco e feijão"
-        ],
-        "saladas": [
+            "Arroz branco e feijão",
             "chicória",
             "tomate"
         ],
@@ -185,12 +198,13 @@
     {
         "id": "2025-09-18",
         "dia": "Quinta-feira",
+        "data": "18/09/2025",
         "prato": "Bisteca de porco",
+        "descricao": "Tutu à mineira",
+        "proteina": "Bisteca de porco",
         "acompanhamentos": [
             "Tutu à mineira",
-            "Arroz branco e feijão"
-        ],
-        "saladas": [
+            "Arroz branco e feijão",
             "folhas com frutas"
         ],
         "sobremesa": "Bolo de chocolate"
@@ -198,12 +212,13 @@
     {
         "id": "2025-09-19",
         "dia": "Sexta-feira",
+        "data": "19/09/2025",
         "prato": "Strogonoff bovino",
+        "descricao": "Batata palha",
+        "proteina": "Strogonoff bovino",
         "acompanhamentos": [
             "Batata palha",
-            "Arroz branco e feijão"
-        ],
-        "saladas": [
+            "Arroz branco e feijão",
             "repolho",
             "cenoura com gergelim preto"
         ],
@@ -212,13 +227,14 @@
     {
         "id": "2025-09-22",
         "dia": "Segunda-feira",
+        "data": "22/09/2025",
         "prato": "Linguiça ao sugo",
+        "descricao": "Ovo frito",
+        "proteina": "Linguiça ao sugo",
         "acompanhamentos": [
             "Ovo frito",
             "Macarrão bolonhesa",
-            "Arroz branco e feijão"
-        ],
-        "saladas": [
+            "Arroz branco e feijão",
             "folhas",
             "tomate"
         ],
@@ -227,12 +243,13 @@
     {
         "id": "2025-09-23",
         "dia": "Terça-feira",
+        "data": "23/09/2025",
         "prato": "Frango empanado",
+        "descricao": "Purê de batatas",
+        "proteina": "Frango empanado",
         "acompanhamentos": [
             "Purê de batatas",
-            "Arroz branco e feijão"
-        ],
-        "saladas": [
+            "Arroz branco e feijão",
             "repolho com gengibre",
             "pepino"
         ],
@@ -241,12 +258,13 @@
     {
         "id": "2025-09-24",
         "dia": "Quarta-feira",
+        "data": "24/09/2025",
         "prato": "Vaca atolada",
+        "descricao": "Farofa de ovo",
+        "proteina": "Vaca atolada",
         "acompanhamentos": [
             "Farofa de ovo",
-            "Arroz branco e feijão"
-        ],
-        "saladas": [
+            "Arroz branco e feijão",
             "vinagrete de tomate"
         ],
         "sobremesa": "Fruta"
@@ -254,13 +272,14 @@
     {
         "id": "2025-09-25",
         "dia": "Quinta-feira",
+        "data": "25/09/2025",
         "prato": "Porco xadrez",
+        "descricao": "Macarrão com bacon e ervilhas",
+        "proteina": "Porco xadrez",
         "acompanhamentos": [
             "Macarrão com bacon e ervilhas",
             "Enroladinho de salsicha",
-            "Arroz branco e feijão"
-        ],
-        "saladas": [
+            "Arroz branco e feijão",
             "acelga"
         ],
         "sobremesa": "Manjar com calda"
@@ -268,15 +287,16 @@
     {
         "id": "2025-09-26",
         "dia": "Sexta-feira",
+        "data": "26/09/2025",
         "prato": "Cardápio especial",
+        "descricao": "Lagarto ao molho madeira",
+        "proteina": "Cardápio especial",
         "acompanhamentos": [
             "Lagarto ao molho madeira",
             "Arroz à grega",
             "Arroz branco e feijão",
             "Salada de folhas com frutas e tomate cereja",
-            "Molho para salada"
-        ],
-        "saladas": [
+            "Molho para salada",
             "salada de folhas"
         ],
         "sobremesa": "Pavê de beijinho"
@@ -284,13 +304,14 @@
     {
         "id": "2025-09-29",
         "dia": "Segunda-feira",
+        "data": "29/09/2025",
         "prato": "Frango acebolado",
+        "descricao": "Polenta com queijo",
+        "proteina": "Frango acebolado",
         "acompanhamentos": [
             "Polenta com queijo",
             "Macarrão com legumes",
-            "Arroz branco e feijão"
-        ],
-        "saladas": [
+            "Arroz branco e feijão",
             "tomate com pepino",
             "repolho"
         ],
@@ -299,13 +320,14 @@
     {
         "id": "2025-09-30",
         "dia": "Terça-feira",
+        "data": "30/09/2025",
         "prato": "Cubos de pernil com cebola",
+        "descricao": "Batata rústica ao bechamel",
+        "proteina": "Cubos de pernil com cebola",
         "acompanhamentos": [
             "Batata rústica ao bechamel",
             "Farofa de linguiça",
-            "Arroz branco e feijão"
-        ],
-        "saladas": [
+            "Arroz branco e feijão",
             "folhas com frutas"
         ],
         "sobremesa": "Canjica"
